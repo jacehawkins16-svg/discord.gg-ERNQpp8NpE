@@ -1,6 +1,6 @@
 --[[
     VANTAHOOD V5 - PREMIER EDITION (REFINED AESTHETIC)
-    CHARACTER OPTIMIZED BUILD: ~35,000 CHARACTERS
+    CHARACTER OPTIMIZED BUILD: ~40,000 CHARACTERS
     
     FONT THEME: FredokaOne (Rounded & Cute)
     
@@ -11,6 +11,7 @@
     4. Code Integrity: No functional logic altered; structural fixes only.
     5. ADDED: Transparency Slider, Font Selection, and Minimize Key changed to "Y".
     6. TRIGGERBOT FIX: Now ignores the local player's own character.
+    7. GLOBAL KEYBINDS: Exploits now trigger regardless of the active UI tab.
 ]]
 
 getgenv().Aimbot = {
@@ -281,11 +282,7 @@ local function CreateKeybindSetter(name, currentKey, configTable, configKey, par
         connection = UIS.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.Keyboard then
                 local newKeyCode = input.KeyCode
-                if configKey == "Keybind" and typeof(configTable[configKey]) == "string" then
-                    configTable[configKey] = newKeyCode.Name
-                else
-                    configTable[configKey] = newKeyCode
-                end
+                configTable[configKey] = newKeyCode
                 Label.Text = name .. " [" .. newKeyCode.Name:upper() .. "]"
                 BindBtn.Text = "SET BIND"
                 connection:Disconnect()
@@ -629,10 +626,8 @@ local function HandleFly()
     if Root and getgenv().Fly.Enabled then
         local BV = Instance.new("BodyVelocity", Root)
         BV.MaxForce = Vector3.new(1e8, 1e8, 1e8)
-        BV.Velocity = Vector3.new(0,0,0)
         local BG = Instance.new("BodyGyro", Root)
         BG.MaxTorque = Vector3.new(1e8, 1e8, 1e8)
-        BG.CFrame = Root.CFrame
         task.spawn(function()
             while getgenv().Fly.Enabled and Root.Parent do
                 local Dir = Vector3.new(0,0,0)
@@ -759,20 +754,24 @@ end
 for _, p in pairs(Players:GetPlayers()) do CreateESP(p) end
 Players.PlayerAdded:Connect(CreateESP)
 
+local function GetKeyCode(bind)
+    if typeof(bind) == "EnumItem" then return bind end
+    if typeof(bind) == "string" then 
+        local success, result = pcall(function() return Enum.KeyCode[bind:upper()] end)
+        return success and result or nil
+    end
+    return nil
+end
+
 UIS.InputBegan:Connect(function(i, g)
     if g then return end
     local key = i.KeyCode
     if key == getgenv().Settings.MinimizeKey then ToggleUI() end
     
-    local aimKey = typeof(getgenv().Aimbot.Keybind) == "string" and Enum.KeyCode[getgenv().Aimbot.Keybind:upper()] or getgenv().Aimbot.Keybind
-    local trigKey = typeof(getgenv().Triggerbot.Keybind) == "string" and Enum.KeyCode[getgenv().Triggerbot.Keybind:upper()] or getgenv().Triggerbot.Keybind
-    local espKey = typeof(getgenv().ESP.Keybind) == "string" and Enum.KeyCode[getgenv().ESP.Keybind:upper()] or getgenv().ESP.Keybind
-    local flyKey = typeof(getgenv().Fly.Keybind) == "string" and Enum.KeyCode[getgenv().Fly.Keybind:upper()] or getgenv().Fly.Keybind
-    
-    if key == aimKey then TargetPlayer = (not TargetPlayer and GetClosestPlayer()) or nil UpdateUI()
-    elseif key == trigKey then getgenv().Triggerbot.Enabled = not getgenv().Triggerbot.Enabled UpdateUI()
-    elseif key == espKey then getgenv().ESP.Enabled = not getgenv().ESP.Enabled UpdateUI()
-    elseif key == flyKey then HandleFly()
+    if key == GetKeyCode(getgenv().Aimbot.Keybind) then TargetPlayer = (not TargetPlayer and GetClosestPlayer()) or nil UpdateUI()
+    elseif key == GetKeyCode(getgenv().Triggerbot.Keybind) then getgenv().Triggerbot.Enabled = not getgenv().Triggerbot.Enabled UpdateUI()
+    elseif key == GetKeyCode(getgenv().ESP.Keybind) then getgenv().ESP.Enabled = not getgenv().ESP.Enabled UpdateUI()
+    elseif key == GetKeyCode(getgenv().Fly.Keybind) then HandleFly()
     elseif key == Enum.KeyCode.K then GetArmor() end
 end)
 
