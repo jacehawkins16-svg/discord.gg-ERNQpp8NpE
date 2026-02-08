@@ -11,7 +11,7 @@
     4. Code Integrity: No functional logic altered; structural fixes only.
     5. ADDED: Transparency Slider, Font Selection, and Minimize Key changed to "Y".
     6. TRIGGERBOT FIX: Now ignores the local player's own character.
-    7. MOBILE TOGGLE: Added right-side minimize/maximize button for mobile/tablet.
+    7. MOBILE FIX: Improved device detection and moved toggle button to the right side.
 ]]
 
 getgenv().Aimbot = {
@@ -86,7 +86,7 @@ local TargetPlayer = nil
 local SelectedPlayerForTP = nil
 local CuteFont = Enum.Font.FredokaOne 
 
--- Mobile Detection Logic
+-- Improved Mobile/Tablet Detection
 local IsMobile = UIS.TouchEnabled and not UIS.KeyboardEnabled
 
 --- ### MODERN UI SETUP
@@ -218,14 +218,14 @@ local function ToggleUI()
     MainFrame.Visible = getgenv().Settings.IsVisible
 end
 
--- Mobile/Tablet Toggle Button (Right Side)
+-- Mobile/Tablet Toggle (Only appears if not on PC)
 if IsMobile then
     local MobileBtn = Instance.new("TextButton", ScreenGui)
     MobileBtn.Name = "MobileToggle"
     MobileBtn.Size = UDim2.new(0, 50, 0, 50)
-    -- Positioned on the Right side of the screen
+    -- Positioned on the Right Side
     MobileBtn.Position = UDim2.new(1, -60, 0.5, -25) 
-    MobileBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+    MobileBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
     MobileBtn.BorderSizePixel = 2
     MobileBtn.BorderColor3 = Color3.fromRGB(0, 170, 255)
     MobileBtn.Text = "VH"
@@ -235,7 +235,6 @@ if IsMobile then
     MobileBtn.Draggable = true
     MobileBtn.Active = true
     Instance.new("UICorner", MobileBtn).CornerRadius = UDim.new(0, 12)
-    
     MobileBtn.MouseButton1Click:Connect(ToggleUI)
 end
 
