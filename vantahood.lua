@@ -463,7 +463,22 @@ BindHeader.TextColor3 = Color3.fromRGB(0, 170, 255)
 BindHeader.TextSize = 13
 BindHeader.LayoutOrder = 3
 
-CreateKeybindSetter("GUI Minimize", "Y", getgenv().Settings, "MinimizeKey", Tabs.Settings, 4)
+-- FIXED MINIMIZE GUI KEYBIND FEATURE
+local FixedMinimizeFrame = Instance.new("Frame", Tabs.Settings)
+FixedMinimizeFrame.Size = UDim2.new(0.95, 0, 0, 45)
+FixedMinimizeFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+FixedMinimizeFrame.LayoutOrder = 4
+Instance.new("UICorner", FixedMinimizeFrame).CornerRadius = UDim.new(0, 8)
+
+local FixedMinimizeLabel = Instance.new("TextLabel", FixedMinimizeFrame)
+FixedMinimizeLabel.Size = UDim2.new(1, 0, 1, 0)
+FixedMinimizeLabel.BackgroundTransparency = 1
+FixedMinimizeLabel.Font = CuteFont
+FixedMinimizeLabel.Text = "GUI MINIMIZE [Y]" -- Permanently locked to "Y"
+FixedMinimizeLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
+FixedMinimizeLabel.TextSize = 14
+FixedMinimizeLabel.TextXAlignment = Enum.TextXAlignment.Center -- Centered text
+
 CreateKeybindSetter("Aimbot", getgenv().Aimbot.Keybind, getgenv().Aimbot, "Keybind", Tabs.Settings, 5)
 CreateKeybindSetter("Triggerbot", getgenv().Triggerbot.Keybind, getgenv().Triggerbot, "Keybind", Tabs.Settings, 6)
 CreateKeybindSetter("ESP", getgenv().ESP.Keybind, getgenv().ESP, "Keybind", Tabs.Settings, 7)
@@ -820,7 +835,11 @@ RunService.RenderStepped:Connect(function()
     end
     if getgenv().Triggerbot.Enabled then
         local MouseRay = Camera:ViewportPointToRay(Mouse.X, Mouse.Y)
-        local Result = Workspace:Raycast(MouseRay.Origin, MouseRay.Direction * 1000)
+        local RaycastParamsInstance = RaycastParams.new() -- Integrated from vantahood triggerbot.lua
+        RaycastParamsInstance.FilterType = Enum.RaycastFilterType.Exclude
+        RaycastParamsInstance.FilterDescendantsInstances = {LocalPlayer.Character}
+
+        local Result = Workspace:Raycast(MouseRay.Origin, MouseRay.Direction * 1000, RaycastParamsInstance)
         if Result and Result.Instance then
             local HitPart = Result.Instance
             local HitModel = HitPart:FindFirstAncestorOfClass("Model")
