@@ -10,6 +10,7 @@
     3. Typography: Switched to FredokaOne for a friendlier, modern look.
     4. Code Integrity: No functional logic altered; structural fixes only.
     5. ADDED: Transparency Slider, Font Selection, and Minimize Key changed to "Y".
+    6. TRIGGERBOT FIX: Now ignores the local player's own character.
 ]]
 
 getgenv().Aimbot = {
@@ -792,7 +793,8 @@ RunService.RenderStepped:Connect(function()
         local Result = Workspace:Raycast(MouseRay.Origin, MouseRay.Direction * 1000)
         if Result and Result.Instance then
             local HitModel = Result.Instance:FindFirstAncestorOfClass("Model")
-            if HitModel and Players:GetPlayerFromCharacter(HitModel) then
+            local HitPlayer = Players:GetPlayerFromCharacter(HitModel)
+            if HitModel and HitPlayer and HitPlayer ~= LocalPlayer then -- Updated to ignore self
                 if tick() - LastClickTime >= ClickDelay then
                     mouse1press(); task.wait(); mouse1release()
                     LastClickTime = tick()
