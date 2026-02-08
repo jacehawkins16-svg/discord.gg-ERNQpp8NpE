@@ -259,7 +259,8 @@ local function CreateKeybindSetter(name, currentKey, configTable, configKey, par
     Label.Position = UDim2.new(0, 12, 0, 0)
     Label.BackgroundTransparency = 1
     Label.Font = CuteFont
-    Label.Text = name .. " [" .. tostring(currentKey):upper() .. "]"
+    local initialKeyName = typeof(currentKey) == "EnumItem" and currentKey.Name or tostring(currentKey)
+    Label.Text = name .. " [" .. initialKeyName:upper() .. "]"
     Label.TextColor3 = Color3.fromRGB(240, 240, 240)
     Label.TextSize = 14
     Label.TextXAlignment = Enum.TextXAlignment.Left
@@ -279,9 +280,13 @@ local function CreateKeybindSetter(name, currentKey, configTable, configKey, par
         local connection
         connection = UIS.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.Keyboard then
-                local newKey = input.KeyCode.Name
-                configTable[configKey] = input.KeyCode
-                Label.Text = name .. " [" .. newKey:upper() .. "]"
+                local newKeyCode = input.KeyCode
+                if configKey == "Keybind" and typeof(configTable[configKey]) == "string" then
+                    configTable[configKey] = newKeyCode.Name
+                else
+                    configTable[configKey] = newKeyCode
+                end
+                Label.Text = name .. " [" .. newKeyCode.Name:upper() .. "]"
                 BindBtn.Text = "SET BIND"
                 connection:Disconnect()
             end
@@ -462,7 +467,7 @@ BindHeader.TextColor3 = Color3.fromRGB(0, 170, 255)
 BindHeader.TextSize = 13
 BindHeader.LayoutOrder = 3
 
-CreateKeybindSetter("GUI Minimize", "Y", getgenv().Settings, "MinimizeKey", Tabs.Settings, 4)
+CreateKeybindSetter("GUI Minimize", getgenv().Settings.MinimizeKey, getgenv().Settings, "MinimizeKey", Tabs.Settings, 4)
 CreateKeybindSetter("Aimbot", getgenv().Aimbot.Keybind, getgenv().Aimbot, "Keybind", Tabs.Settings, 5)
 CreateKeybindSetter("Triggerbot", getgenv().Triggerbot.Keybind, getgenv().Triggerbot, "Keybind", Tabs.Settings, 6)
 CreateKeybindSetter("ESP", getgenv().ESP.Keybind, getgenv().ESP, "Keybind", Tabs.Settings, 7)
@@ -618,17 +623,16 @@ SelectBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-CreateToggle("Aimbot", getgenv().Aimbot.Keybind, Tabs.Exploits, function() TargetPlayer = (not TargetPlayer and GetClosestPlayer()) or nil UpdateUI() end)
-CreateToggle("Triggerbot", getgenv().Triggerbot.Keybind, Tabs.Exploits, function() getgenv().Triggerbot.Enabled = not getgenv().Triggerbot.Enabled UpdateUI() end)
-CreateToggle("ESP", getgenv().ESP.Keybind, Tabs.Exploits, function() getgenv().ESP.Enabled = not getgenv().ESP.Enabled UpdateUI() end)
-CreateToggle("Fly", getgenv().Fly.Keybind, Tabs.Exploits, function()
+local function HandleFly()
     getgenv().Fly.Enabled = not getgenv().Fly.Enabled
     local Root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if Root and getgenv().Fly.Enabled then
         local BV = Instance.new("BodyVelocity", Root)
         BV.MaxForce = Vector3.new(1e8, 1e8, 1e8)
+        BV.Velocity = Vector3.new(0,0,0)
         local BG = Instance.new("BodyGyro", Root)
         BG.MaxTorque = Vector3.new(1e8, 1e8, 1e8)
+        BG.CFrame = Root.CFrame
         task.spawn(function()
             while getgenv().Fly.Enabled and Root.Parent do
                 local Dir = Vector3.new(0,0,0)
@@ -640,11 +644,17 @@ CreateToggle("Fly", getgenv().Fly.Keybind, Tabs.Exploits, function()
                 BG.CFrame = Camera.CFrame
                 RunService.RenderStepped:Wait()
             end
-            BV:Destroy() BG:Destroy()
+            if BV then BV:Destroy() end
+            if BG then BG:Destroy() end
         end)
     end
     UpdateUI()
-end)
+end
+
+CreateToggle("Aimbot", getgenv().Aimbot.Keybind, Tabs.Exploits, function() TargetPlayer = (not TargetPlayer and GetClosestPlayer()) or nil UpdateUI() end)
+CreateToggle("Triggerbot", getgenv().Triggerbot.Keybind, Tabs.Exploits, function() getgenv().Triggerbot.Enabled = not getgenv().Triggerbot.Enabled UpdateUI() end)
+CreateToggle("ESP", getgenv().ESP.Keybind, Tabs.Exploits, function() getgenv().ESP.Enabled = not getgenv().ESP.Enabled UpdateUI() end)
+CreateToggle("Fly", getgenv().Fly.Keybind, Tabs.Exploits, HandleFly)
 CreateToggle("Noclip", getgenv().Noclip.Keybind, Tabs.Exploits, function() getgenv().Noclip.Enabled = not getgenv().Noclip.Enabled UpdateUI() end)
 CreateToggle("Fake Macro", getgenv().FakeMacro.Keybind, Tabs.Exploits, function() getgenv().FakeMacro.Enabled = not getgenv().FakeMacro.Enabled UpdateUI() end)
 CreateToggle("Loop Kill", getgenv().LoopKill.Keybind, Tabs.Exploits, function() 
@@ -753,10 +763,16 @@ UIS.InputBegan:Connect(function(i, g)
     if g then return end
     local key = i.KeyCode
     if key == getgenv().Settings.MinimizeKey then ToggleUI() end
-    if key == Enum.KeyCode[tostring(getgenv().Aimbot.Keybind):upper()] then TargetPlayer = (not TargetPlayer and GetClosestPlayer()) or nil UpdateUI()
-    elseif key == Enum.KeyCode[tostring(getgenv().Triggerbot.Keybind):upper()] then getgenv().Triggerbot.Enabled = not getgenv().Triggerbot.Enabled UpdateUI()
-    elseif key == Enum.KeyCode[tostring(getgenv().ESP.Keybind):upper()] then getgenv().ESP.Enabled = not getgenv().ESP.Enabled UpdateUI()
-    elseif key == Enum.KeyCode[tostring(getgenv().Fly.Keybind):upper()] then getgenv().Fly.Enabled = not getgenv().Fly.Enabled UpdateUI()
+    
+    local aimKey = typeof(getgenv().Aimbot.Keybind) == "string" and Enum.KeyCode[getgenv().Aimbot.Keybind:upper()] or getgenv().Aimbot.Keybind
+    local trigKey = typeof(getgenv().Triggerbot.Keybind) == "string" and Enum.KeyCode[getgenv().Triggerbot.Keybind:upper()] or getgenv().Triggerbot.Keybind
+    local espKey = typeof(getgenv().ESP.Keybind) == "string" and Enum.KeyCode[getgenv().ESP.Keybind:upper()] or getgenv().ESP.Keybind
+    local flyKey = typeof(getgenv().Fly.Keybind) == "string" and Enum.KeyCode[getgenv().Fly.Keybind:upper()] or getgenv().Fly.Keybind
+    
+    if key == aimKey then TargetPlayer = (not TargetPlayer and GetClosestPlayer()) or nil UpdateUI()
+    elseif key == trigKey then getgenv().Triggerbot.Enabled = not getgenv().Triggerbot.Enabled UpdateUI()
+    elseif key == espKey then getgenv().ESP.Enabled = not getgenv().ESP.Enabled UpdateUI()
+    elseif key == flyKey then HandleFly()
     elseif key == Enum.KeyCode.K then GetArmor() end
 end)
 
@@ -794,7 +810,7 @@ RunService.RenderStepped:Connect(function()
         if Result and Result.Instance then
             local HitModel = Result.Instance:FindFirstAncestorOfClass("Model")
             local HitPlayer = Players:GetPlayerFromCharacter(HitModel)
-            if HitModel and HitPlayer and HitPlayer ~= LocalPlayer then -- Updated to ignore self
+            if HitModel and HitPlayer and HitPlayer ~= LocalPlayer then
                 if tick() - LastClickTime >= ClickDelay then
                     mouse1press(); task.wait(); mouse1release()
                     LastClickTime = tick()
