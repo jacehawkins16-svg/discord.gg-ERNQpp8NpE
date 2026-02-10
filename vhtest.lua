@@ -17,7 +17,7 @@
 
 -- ### BLACKLIST SYSTEM ###
 local BlacklistedIDs = {
-    ["131304140363367"] = true,
+    ["5913858916"] = true,
     -- Add more IDs here: ["ID_HERE"] = true,
 }
 
