@@ -1,5 +1,5 @@
 --[[
-    VANTAHOOD V5 - PREMIER EDITION (REFINED AESTHETIC)
+    VANTAHOOD V6 - PREMIER EDITION (REFINED AESTHETIC)
     CHARACTER OPTIMIZED BUILD: ~40,000 CHARACTERS
     
     FONT THEME: FredokaOne (Rounded & Cute)
@@ -12,7 +12,20 @@
     5. ADDED: Transparency Slider, Font Selection, and Minimize Key changed to "Y".
     6. TRIGGERBOT FIX: Now ignores the local player's own character.
     7. TRIGGERBOT ENHANCEMENT: Detects all player parts (Head, Torso, Arms, etc).
+    8. BLACKLIST: Added Experience ID check to kick from specific games.
 ]]
+
+-- ### BLACKLIST SYSTEM ###
+local BlacklistedIDs = {
+    ["131304140363367"] = true,
+    -- Add more IDs here: ["ID_HERE"] = true,
+}
+
+if BlacklistedIDs[tostring(game.GameId)] or BlacklistedIDs[tostring(game.PlaceId)] then
+    game:GetService("Players").LocalPlayer:Kick("Game Blacklisted")
+    return
+end
+-- ########################
 
 getgenv().Aimbot = {
     Status = true,
@@ -184,7 +197,7 @@ local MainTitle = Instance.new("TextLabel", BottomNav)
 MainTitle.Size = UDim2.new(1, 0, 0, 35)
 MainTitle.BackgroundTransparency = 1
 MainTitle.Font = CuteFont
-MainTitle.Text = "VANTAHOOD V5"
+MainTitle.Text = "VANTAHOOD V6"
 MainTitle.TextColor3 = Color3.fromRGB(0, 170, 255)
 MainTitle.TextSize = 17
 MainTitle.LayoutOrder = 3
@@ -218,21 +231,22 @@ local function ToggleUI()
     MainFrame.Visible = getgenv().Settings.IsVisible
 end
 
+-- REDUCED MOBILE UI SIZE
 if IsMobile then
     local MobileBtn = Instance.new("TextButton", ScreenGui)
     MobileBtn.Name = "MobileToggle"
-    MobileBtn.Size = UDim2.new(0, 45, 0, 45)
-    MobileBtn.Position = UDim2.new(0, 10, 0.5, -22)
+    MobileBtn.Size = UDim2.new(0, 35, 0, 35) -- Reduced from 45x45
+    MobileBtn.Position = UDim2.new(0, 10, 0.5, -17)
     MobileBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
     MobileBtn.BorderSizePixel = 2
     MobileBtn.BorderColor3 = Color3.fromRGB(0, 170, 255)
     MobileBtn.Text = "VH"
     MobileBtn.Font = CuteFont
     MobileBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    MobileBtn.TextSize = 16
+    MobileBtn.TextSize = 13 -- Reduced from 16
     MobileBtn.Draggable = true
     MobileBtn.Active = true
-    Instance.new("UICorner", MobileBtn).CornerRadius = UDim.new(0, 12)
+    Instance.new("UICorner", MobileBtn).CornerRadius = UDim.new(0, 10)
     MobileBtn.MouseButton1Click:Connect(ToggleUI)
 end
 
@@ -463,7 +477,22 @@ BindHeader.TextColor3 = Color3.fromRGB(0, 170, 255)
 BindHeader.TextSize = 13
 BindHeader.LayoutOrder = 3
 
-CreateKeybindSetter("GUI Minimize", "Y", getgenv().Settings, "MinimizeKey", Tabs.Settings, 4)
+-- FIXED MINIMIZE GUI KEYBIND FEATURE
+local FixedMinimizeFrame = Instance.new("Frame", Tabs.Settings)
+FixedMinimizeFrame.Size = UDim2.new(0.95, 0, 0, 45)
+FixedMinimizeFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+FixedMinimizeFrame.LayoutOrder = 4
+Instance.new("UICorner", FixedMinimizeFrame).CornerRadius = UDim.new(0, 8)
+
+local FixedMinimizeLabel = Instance.new("TextLabel", FixedMinimizeFrame)
+FixedMinimizeLabel.Size = UDim2.new(1, 0, 1, 0)
+FixedMinimizeLabel.BackgroundTransparency = 1
+FixedMinimizeLabel.Font = CuteFont
+FixedMinimizeLabel.Text = "GUI MINIMIZE [Y]" -- Permanently locked to "Y"
+FixedMinimizeLabel.TextColor3 = Color3.fromRGB(240, 240, 240)
+FixedMinimizeLabel.TextSize = 14
+FixedMinimizeLabel.TextXAlignment = Enum.TextXAlignment.Center -- Centered text
+
 CreateKeybindSetter("Aimbot", getgenv().Aimbot.Keybind, getgenv().Aimbot, "Keybind", Tabs.Settings, 5)
 CreateKeybindSetter("Triggerbot", getgenv().Triggerbot.Keybind, getgenv().Triggerbot, "Keybind", Tabs.Settings, 6)
 CreateKeybindSetter("ESP", getgenv().ESP.Keybind, getgenv().ESP, "Keybind", Tabs.Settings, 7)
@@ -717,7 +746,7 @@ AddCredit("--- SPECIAL THANKS ---", Color3.fromRGB(255, 255, 255))
 AddCredit("Testers: Vanta Elite Group", Color3.fromRGB(150, 255, 150))
 AddCredit("Legacy Support: Jace Scripts", Color3.fromRGB(200, 200, 200))
 AddCredit("Theme Inspiration: Modern Glass UI", Color3.fromRGB(255, 150, 255))
-AddCredit("Version: Premier Edition v5.1.0", Color3.fromRGB(0, 170, 255))
+AddCredit("Version: Premier Edition v6.0.0", Color3.fromRGB(0, 170, 255))
 
 --- ### GAME RENDER LOOPS
 local function GetHealthColor(percent)
@@ -820,7 +849,11 @@ RunService.RenderStepped:Connect(function()
     end
     if getgenv().Triggerbot.Enabled then
         local MouseRay = Camera:ViewportPointToRay(Mouse.X, Mouse.Y)
-        local Result = Workspace:Raycast(MouseRay.Origin, MouseRay.Direction * 1000)
+        local RaycastParamsInstance = RaycastParams.new() -- Integrated from vantahood triggerbot.lua
+        RaycastParamsInstance.FilterType = Enum.RaycastFilterType.Exclude
+        RaycastParamsInstance.FilterDescendantsInstances = {LocalPlayer.Character}
+
+        local Result = Workspace:Raycast(MouseRay.Origin, MouseRay.Direction * 1000, RaycastParamsInstance)
         if Result and Result.Instance then
             local HitPart = Result.Instance
             local HitModel = HitPart:FindFirstAncestorOfClass("Model")
