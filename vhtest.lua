@@ -1,2 +1,1 @@
--- This is an example of what obfuscated code looks like:
-local _0x5f22=['\x48\x65\x6c\x6c\x6f','\x70\x72\x69\x6e\x74'];(function(_0x1a22,_0x5f22e1){local _0x3841=function(_0x2d3f6d){while(--_0x2d3f6d){_0x1a22['push'](_0x1a22['shift']());}};_0x3841(++_0x5f22e1);}(_0x5f22,0x1b3));local _0x3841=function(_0x1a22,_0x5f22e1){_0x1a22=_0x1a22-0x0;local _0x2d3f6d=_0x5f22[_0x1a22];return _0x2d3f6d;};print(_0x3841('0x0'));
+loadstring("\112\114\105\110\116\40\34\32\89\79\85\82\32\83\67\82\73\80\84\32\72\69\82\69\33\33\32\34\41\10")()
