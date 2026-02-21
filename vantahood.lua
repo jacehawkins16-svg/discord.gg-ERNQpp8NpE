@@ -1,3 +1,4 @@
+
 --[[
     VANTAHOOD V7 - PREMIER EDITION (REFINED AESTHETIC)
     CHARACTER OPTIMIZED BUILD: ~+45,000 CHARACTERS
@@ -1462,7 +1463,11 @@ end)
 RunService.RenderStepped:Connect(function()
     if TargetPlayer and getgenv().Aimbot.Status and TargetPlayer.Character and TargetPlayer.Character:FindFirstChild(getgenv().Aimbot.Hitpart) then
         local Part = TargetPlayer.Character[getgenv().Aimbot.Hitpart]
-        Camera.CFrame = CFrame.new(Camera.CFrame.Position, Part.Position + (Part.Velocity * Vector3.new(getgenv().Aimbot.Prediction.X, getgenv().Aimbot.Prediction.Y, getgenv().Aimbot.Prediction.X)))
+        local predictedPos = Part.Position + (Part.Velocity * Vector3.new(getgenv().Aimbot.Prediction.X, getgenv().Aimbot.Prediction.Y, getgenv().Aimbot.Prediction.X))
+        local dist = (Camera.CFrame.Position - Part.Position).Magnitude
+        if dist > 5 then
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, predictedPos)
+        end
     end
     if getgenv().Triggerbot.Enabled then
         local MouseRay = Camera:ViewportPointToRay(Mouse.X, Mouse.Y)
