@@ -24,6 +24,19 @@
     </style>
 </head>
 <body>
+        <script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+      navigator.serviceWorker.register('/service-worker.js')
+        .then(function(registration) {
+          console.log('Service worker registered successfully.');
+        })
+        .catch(function(error) {
+          console.log('Service worker registration failed: ', error);
+        });
+    });
+  }
+</script>
     <h1>404</h1>
     <p>Oops! The page you’re looking for has drifted into deep space.</p>
     <a href="/" class="btn">Back to Home</a>
