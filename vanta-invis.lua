@@ -383,11 +383,23 @@ end)
 
 minimizeBtn.MouseButton1Click:Connect(toggleMinimize)
 
--- Optional: disable ghost on respawn
-player.CharacterAdded:Connect(function()
-    task.delay(0.8, function()
-        if invis_on then
-            forceDisableGhost()
+-- Cleanup on character removing (death)
+player.CharacterRemoving:Connect(function()
+    local chair = workspace:FindFirstChild("invischair")
+    if chair then
+        chair:Destroy()
+    end
+end)
+
+-- Re-enable on respawn if it was on
+player.CharacterAdded:Connect(function(newChar)
+    if invis_on then
+        newChar:WaitForChild("HumanoidRootPart", 10)
+        newChar:WaitForChild("Humanoid", 10)
+        local torso = newChar:FindFirstChild("Torso") or newChar:FindFirstChild("UpperTorso")
+        if torso then
+            task.wait(0.5)  -- Give time for full load
+            enableGhost()
         end
-    end)
+    end
 end)
