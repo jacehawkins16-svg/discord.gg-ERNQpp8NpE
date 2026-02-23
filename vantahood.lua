@@ -1,5 +1,5 @@
 -- Load Vanta Invis Script: --
-loadstring(game:HttpGet("https://jacehawkins16-svg.github.io/discord.gg-ERNQpp8NpE/vanta-invis.lua"))()
+-- loadstring(game:HttpGet("https://jacehawkins16-svg.github.io/discord.gg-ERNQpp8NpE/vanta-invis.lua"))()
 --[[
     VANTAHOOD V7 - PREMIER EDITION (REFINED AESTHETIC)
     CHARACTER OPTIMIZED BUILD: ~+45,000 CHARACTERS
