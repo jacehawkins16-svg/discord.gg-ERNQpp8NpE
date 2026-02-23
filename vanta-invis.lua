@@ -69,7 +69,7 @@ local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, -90, 0, 50)
 title.Position = UDim2.new(0, 20, 0, 8)
 title.BackgroundTransparency = 1
-title.Text = "GHOST MODE"
+title.Text = "INVIS MODE"
 title.TextColor3 = Color3.fromRGB(235, 245, 255)
 title.TextSize = 26
 title.Font = Enum.Font.GothamBlack
@@ -120,7 +120,7 @@ local toggleBtn = Instance.new("TextButton")
 toggleBtn.Size = UDim2.new(0.86, 0, 0, 68)
 toggleBtn.Position = UDim2.new(0.07, 0, 0.32, 0)
 toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 145, 255)
-toggleBtn.Text = "GHOST OFF"
+toggleBtn.Text = "INVIS OFF"
 toggleBtn.TextColor3 = Color3.new(1,1,1)
 toggleBtn.TextSize = 28
 toggleBtn.Font = Enum.Font.GothamBlack
@@ -332,14 +332,14 @@ local function toggleGhost()
 
     if invis_on then
         toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 210, 120)
-        toggleBtn.Text = "GHOST ON"
+        toggleBtn.Text = "INVIS ON"
         enableGhost()
-        showNotification("GHOST MODE", "ENABLED  —  visible to yourself only")
+        showNotification("INVIS MODE", "ENABLED  —  visible to yourself only")
     else
         disableGhost()
         toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 145, 255)
-        toggleBtn.Text = "GHOST OFF"
-        showNotification("GHOST MODE", "DISABLED")
+        toggleBtn.Text = "INVIS OFF"
+        showNotification("INVIS MODE", "DISABLED")
     end
 end
 
@@ -348,7 +348,7 @@ local function forceDisableGhost()
         disableGhost()
         invis_on = false
         toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 145, 255)
-        toggleBtn.Text = "GHOST OFF"
+        toggleBtn.Text = "INVIS OFF"
     end
 end
 
