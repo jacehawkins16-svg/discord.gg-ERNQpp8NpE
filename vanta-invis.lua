@@ -3,7 +3,7 @@ local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 
 local player = Players.LocalPlayer
-local invis_on = false
+local ghost_on = false
 local guiMinimized = false
 
 -- Create ScreenGui
@@ -69,7 +69,7 @@ local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, -90, 0, 50)
 title.Position = UDim2.new(0, 20, 0, 8)
 title.BackgroundTransparency = 1
-title.Text = "INVIS MODE"
+title.Text = "GHOST MODE"
 title.TextColor3 = Color3.fromRGB(235, 245, 255)
 title.TextSize = 26
 title.Font = Enum.Font.GothamBlack
@@ -120,7 +120,7 @@ local toggleBtn = Instance.new("TextButton")
 toggleBtn.Size = UDim2.new(0.86, 0, 0, 68)
 toggleBtn.Position = UDim2.new(0.07, 0, 0.32, 0)
 toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 145, 255)
-toggleBtn.Text = "INVIS OFF"
+toggleBtn.Text = "GHOST OFF"
 toggleBtn.TextColor3 = Color3.new(1,1,1)
 toggleBtn.TextSize = 28
 toggleBtn.Font = Enum.Font.GothamBlack
@@ -328,27 +328,27 @@ local function enableGhost()
 end
 
 local function toggleGhost()
-    invis_on = not invis_on
+    ghost_on = not ghost_on
 
-    if invis_on then
+    if ghost_on then
         toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 210, 120)
-        toggleBtn.Text = "INVIS ON"
+        toggleBtn.Text = "GHOST ON"
         enableGhost()
-        showNotification("INVIS MODE", "ENABLED  —  visible to yourself only")
+        showNotification("GHOST MODE", "ENABLED  —  visible to yourself only")
     else
         disableGhost()
         toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 145, 255)
-        toggleBtn.Text = "INVIS OFF"
-        showNotification("INVIS MODE", "DISABLED")
+        toggleBtn.Text = "GHOST OFF"
+        showNotification("GHOST MODE", "DISABLED")
     end
 end
 
 local function forceDisableGhost()
-    if invis_on then
+    if ghost_on then
         disableGhost()
-        invis_on = false
+        ghost_on = false
         toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 145, 255)
-        toggleBtn.Text = "INVIS OFF"
+        toggleBtn.Text = "GHOST OFF"
     end
 end
 
@@ -383,23 +383,11 @@ end)
 
 minimizeBtn.MouseButton1Click:Connect(toggleMinimize)
 
--- Cleanup on character removing (death)
-player.CharacterRemoving:Connect(function()
-    local chair = workspace:FindFirstChild("invischair")
-    if chair then
-        chair:Destroy()
-    end
-end)
-
--- Re-enable on respawn if it was on
-player.CharacterAdded:Connect(function(newChar)
-    if invis_on then
-        newChar:WaitForChild("HumanoidRootPart", 10)
-        newChar:WaitForChild("Humanoid", 10)
-        local torso = newChar:FindFirstChild("Torso") or newChar:FindFirstChild("UpperTorso")
-        if torso then
-            task.wait(0.5)  -- Give time for full load
-            enableGhost()
+-- Optional: disable ghost on respawn
+player.CharacterAdded:Connect(function()
+    task.delay(0.8, function()
+        if ghost_on then
+            forceDisableGhost()
         end
-    end
+    end)
 end)
