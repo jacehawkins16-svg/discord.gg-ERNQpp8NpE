@@ -1,12 +1,10 @@
 -- Services
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
 local invis_on = false
 local guiMinimized = false
-local debounce = false
 
 -- Create ScreenGui
 local screenGui = Instance.new("ScreenGui")
@@ -17,7 +15,7 @@ screenGui.Parent = player:WaitForChild("PlayerGui")
 -- Main Frame (glassmorphic dark card)
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(0, 280, 0, 220)
-mainFrame.Position = UDim2.new(0.5, -140, 0.5, -110)
+mainFrame.Position = UDim2.new(1, -300, 0.5, -110)
 mainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 18)
 mainFrame.BackgroundTransparency = 0.35
 mainFrame.BorderSizePixel = 0
@@ -144,7 +142,7 @@ local credits = Instance.new("TextLabel")
 credits.Size = UDim2.new(1, -40, 0, 18)
 credits.Position = UDim2.new(0, 20, 1, -48)
 credits.BackgroundTransparency = 1
-credits.Text = "discord.gg/ERNQpp8NpE"
+credits.Text = "DC: Discord.gg/ERNQpp8NpE"
 credits.TextColor3 = Color3.fromRGB(140, 150, 180)
 credits.TextSize = 13
 credits.Font = Enum.Font.Gotham
@@ -354,23 +352,6 @@ local function forceDisableGhost()
     end
 end
 
-local function briefVisible()
-    if debounce then return end
-    debounce = true
-    task.spawn(function()
-        task.wait(0.5)
-        if not invis_on then 
-            debounce = false
-            return 
-        end
-        disableGhost()
-        task.wait(0.25)
-        enableGhost()
-        task.wait(0.1)
-        debounce = false
-    end)
-end
-
 -- Minimize toggle
 local function toggleMinimize()
     guiMinimized = not guiMinimized
@@ -396,22 +377,15 @@ end
 toggleBtn.MouseButton1Click:Connect(toggleGhost)
 
 closeBtn.MouseButton1Click:Connect(function()
-    forceDisableGhost()          -- ← turns ghost off before closing
+    forceDisableGhost()          -- turns ghost off before closing
     screenGui:Destroy()
 end)
 
 minimizeBtn.MouseButton1Click:Connect(toggleMinimize)
 
-UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
-    if gameProcessedEvent then return end
-    if input.KeyCode == Enum.KeyCode.E then
-        briefVisible()
-    end
-end)
-
--- Optional: also disable ghost when character respawns/dies (good practice)
+-- Optional: disable ghost on respawn
 player.CharacterAdded:Connect(function()
-    task.delay(0.8, function()    -- small delay to let character fully load
+    task.delay(0.8, function()
         if invis_on then
             forceDisableGhost()
         end
