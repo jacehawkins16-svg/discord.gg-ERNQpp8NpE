@@ -25,7 +25,6 @@ local MovementTab  = Window:NewTab("Movement")
 local AFKTab       = Window:NewTab("AFK")
 local TeleportsTab = Window:NewTab("Teleports")
 local CameraTab    = Window:NewTab("Camera")
-local DiscordTab   = Window:NewTab("discord.gg/ERNQpp8NpE")
 
 -- Combat Sections
 local TriggerSection = CombatTab:NewSection("Triggerbot")
@@ -60,19 +59,6 @@ local ClickTPSection  = TeleportsTab:NewSection("Click Teleport")
 
 -- Camera Sections
 local CameraFOVSection = CameraTab:NewSection("FOV Changer")
-
--- Discord Tab content
-local JoinSection = DiscordTab:NewSection("Join the Community!")
-DiscordTab:NewLabel("Official Vanta server")
-DiscordTab:NewLabel("https://discord.gg/ERNQpp8NpE")
-DiscordTab:NewLabel("━━━━━━━━━━━━━━━━━━━━━━")
-DiscordTab:NewLabel("• Updates & announcements")
-DiscordTab:NewLabel("• Script releases & configs")
-DiscordTab:NewLabel("• Help & suggestions")
-DiscordTab:NewLabel("• dank memes & giveaways")
-DiscordTab:NewLabel("━━━━━━━━━━━━━━━━━━━━━━")
-DiscordTab:NewLabel("Copy → https://discord.gg/ERNQpp8NpE")
-DiscordTab:NewLabel("We are waiting for you!")
 
 -- Settings Table (updated with cursor presets)
 local Settings = {
@@ -887,3 +873,4 @@ CameraFOVSection:NewLabel("Higher values = wider view")
 CameraFOVSection:NewLabel("Lower values = zoomed in feel")
 
 -- End of script
+print("Vanta Ability Test v2.3 loaded successfully! (Custom Cursor Crosshair from Roblox catalog)")
