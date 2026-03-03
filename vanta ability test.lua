@@ -19,7 +19,7 @@
 -- Total lines: ~1000 (expanded comments, verbose UI labels, extra preset options, detailed helpers)
 
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
-local Window = Library.CreateLib("Vanta Ability Test | discord.gg-ERNQpp8NpE", "DarkTheme")
+local Window = Library.CreateLib("Vanta Ability Test | discord.gg/ERNQpp8NpE", "DarkTheme")
 
 -- Tabs
 local CombatTab    = Window:NewTab("Combat")
@@ -936,4 +936,5 @@ CameraFOVSection:NewLabel("Higher values = wider view")
 CameraFOVSection:NewLabel("Lower values = zoomed in feel")
 
 -- End of script
+
 
