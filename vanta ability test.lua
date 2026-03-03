@@ -3,9 +3,12 @@
 -- AFK Tab: Auto Win / Kill (loop teleport INTO random player legs + constant spin + 10 CPS click)
 -- Safe Zone (loop to -15, 297, 179)
 -- NEW: Team Check toggle (affects Aimbot, Triggerbot, ESP, Auto Win / Kill)
--- NEW: When Auto Win / Kill is turned OFF → reset character
+-- NEW: When Auto Win / Kill is turned OFF → reset character + unequip tool + FULL STOP (dedicated connection now disconnects)
+-- FIXED: Auto Win / Kill now completely stops (no more lingering clicks/spin/TP) when toggled off
+-- CHANGED: Player Teleport buttons now place you DIRECTLY CENTERED into the target's torso (UpperTorso/Torso)
 -- FIXED: ESP now properly loops + re-attaches Chams/Highlights on EVERY player join AND character respawn
 -- CHANGED: Health now shows as text "Health: X" in green above the name
+-- ADDED: Auto-equip first tool when Auto Win / Kill is ON
 -- === MAJOR ADDITIONS ===
 -- • Custom Crosshair as ACTUAL MOUSE CURSOR (using Roblox catalog decal/image IDs)
 -- • Multiple preset crosshairs from Roblox catalog (popular Da Hood / Counter Blox style)
@@ -13,7 +16,7 @@
 -- • Click Teleport (right-click anywhere to teleport)
 -- • Anti-AFK / Anti-Kick (simulates activity every ~25s with jump + small spin)
 -- • FOV Changer (50-120 range, togglable)
--- Total lines: ~980 (expanded comments, verbose UI labels, extra preset options, detailed helpers)
+-- Total lines: ~1000 (expanded comments, verbose UI labels, extra preset options, detailed helpers)
 
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
 local Window = Library.CreateLib("Vanta Ability Test", "DarkTheme")
@@ -31,7 +34,7 @@ local TriggerSection = CombatTab:NewSection("Triggerbot")
 local AimbotSection  = CombatTab:NewSection("Aimbot")
 local MiscSection    = CombatTab:NewSection("Misc")
 
--- Visuals Sections (updated for cursor crosshair)
+-- Visuals Sections
 local FOVSection       = VisualsTab:NewSection("Aimbot FOV Circle")
 local BoxSection       = VisualsTab:NewSection("2D Boxes")
 local TracerSection    = VisualsTab:NewSection("Tracers")
@@ -60,7 +63,7 @@ local ClickTPSection  = TeleportsTab:NewSection("Click Teleport")
 -- Camera Sections
 local CameraFOVSection = CameraTab:NewSection("FOV Changer")
 
--- Settings Table (updated with cursor presets)
+-- Settings Table
 local Settings = {
     Triggerbot = { Enabled = false },
     Aimbot = {
@@ -101,8 +104,8 @@ local Settings = {
     },
     CursorCrosshair = {
         Enabled = false,
-        Preset  = "Default",  -- options: Default, Simple, Glow, Dot, HelloKitty, etc.
-        CustomID = ""         -- user can paste their own rbxassetid://...
+        Preset  = "Default",
+        CustomID = ""
     },
     FOVChanger = {
         Enabled = false,
@@ -129,16 +132,17 @@ local mouse  = lp:GetMouse()
 
 -- Persistent variables
 local defaultFOV = camera.FieldOfView or 70
-local defaultCursor = mouse.Icon  -- save original cursor
+local defaultCursor = mouse.Icon
 local tpTargetName = ""
 local isAntiAFKActive = false
 
--- AFK state (original)
+-- AFK state
 local lastClickTime     = 0
 local currentTarget     = nil
 local targetSwitchTime  = 0
+local autoWinLoop       = nil   -- Dedicated connection for Auto Win (fully stops when disabled)
 
--- FOV Circle (original)
+-- FOV Circle
 local fov = Drawing.new("Circle")
 fov.Thickness    = Settings.Aimbot.CircleThick
 fov.NumSides     = 90
@@ -150,28 +154,27 @@ fov.Visible      = false
 
 local espCache = {}
 
--- Popular Roblox catalog crosshair / cursor IDs (from Da Hood, Counter Blox communities 2025-2026)
--- These are decal/image IDs commonly used for custom cursors
+-- Popular Roblox catalog crosshair IDs
 local CursorPresets = {
-    ["Default"]      = "",  -- empty = Roblox default
-    ["Simple +"]     = "rbxassetid://1827745864",   -- classic small crosshair
+    ["Default"]      = "",
+    ["Simple +"]     = "rbxassetid://1827745864",
     ["Medium Cross"] = "rbxassetid://4048495272",
     ["Small Dot"]    = "rbxassetid://1827745860",
     ["Glow Circle"]  = "rbxassetid://10891594364",
     ["Green Dot"]    = "rbxassetid://240080506",
-    ["Hello Kitty"]  = "rbxassetid://11351620355",  -- aesthetic / meme style
+    ["Hello Kitty"]  = "rbxassetid://11351620355",
     ["Meme Funny"]   = "rbxassetid://10868459554",
-    ["Classic CB"]   = "rbxassetid://3024593464"    -- Counter Blox style
+    ["Classic CB"]   = "rbxassetid://3024593464"
 }
 
--- Helper: is enemy (team check)
+-- Helper: is enemy
 local function isEnemy(player)
     if not Settings.TeamCheck then return true end
     if not player or not lp.Team or not player.Team then return true end
     return player.Team ~= lp.Team
 end
 
--- Visible Check
+-- Visible check
 local function isVisible(targetPart, targetPlr)
     if not (targetPart and targetPlr and targetPlr.Character) then return false end
     local rayParams = RaycastParams.new()
@@ -302,7 +305,7 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
--- Click Teleport Input Handler
+-- Click Teleport
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if Settings.ClickTeleport.Enabled and input.UserInputType == Enum.UserInputType.MouseButton2 then
@@ -320,6 +323,102 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         end
     end
 end)
+
+-- Helper: find and equip first tool
+local function equipFirstTool()
+    if not lp.Character then return end
+    local backpack = lp:FindFirstChild("Backpack")
+    if not backpack then return end
+
+    local alreadyEquipped = lp.Character:FindFirstChildWhichIsA("Tool")
+    if alreadyEquipped then return end
+
+    for _, item in ipairs(backpack:GetChildren()) do
+        if item:IsA("Tool") then
+            lp.Character.Humanoid:EquipTool(item)
+            return
+        end
+    end
+end
+
+-- Helper: unequip current tool
+local function unequipCurrentTool()
+    if not lp.Character then return end
+    local tool = lp.Character:FindFirstChildWhichIsA("Tool")
+    if tool then
+        tool.Parent = lp:FindFirstChild("Backpack")
+    end
+end
+
+-- ==================== AUTO WIN DEDICATED LOOP (FULLY STOPS ON DISABLE) ====================
+local function startAutoWinLoop()
+    if autoWinLoop then return end
+    autoWinLoop = RunService.Heartbeat:Connect(function()
+        if not Settings.AFK.AutoWinEnabled or not lp.Character then return end
+
+        local root = lp.Character:FindFirstChild("HumanoidRootPart")
+        if not root then return end
+
+        local now = tick()
+
+        -- Auto-equip tool every frame (in case dropped)
+        if not lp.Character:FindFirstChildWhichIsA("Tool") then
+            equipFirstTool()
+        end
+
+        -- Spin
+        root.CFrame = root.CFrame * CFrame.Angles(0, 0.25, 0)
+
+        -- Auto click (10 CPS)
+        if now - lastClickTime >= 0.1 then
+            mouse1press()
+            task.delay(0.015, mouse1release)
+            lastClickTime = now
+        end
+
+        -- Switch target every 2 seconds
+        if now - targetSwitchTime >= 2 then
+            local targets = {}
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= lp and p.Character and isEnemy(p) then
+                    local hum = p.Character:FindFirstChildOfClass("Humanoid")
+                    if hum and hum.Health > 0 then
+                        local leg = p.Character:FindFirstChild("LeftLowerLeg") 
+                                 or p.Character:FindFirstChild("RightLowerLeg")
+                                 or p.Character:FindFirstChild("LeftFoot")
+                                 or p.Character:FindFirstChild("RightFoot")
+                                 or p.Character:FindFirstChild("HumanoidRootPart")
+                        if leg then
+                            table.insert(targets, {leg = leg})
+                        end
+                    end
+                end
+            end
+            if #targets > 0 then
+                currentTarget = targets[math.random(1, #targets)]
+            else
+                currentTarget = nil
+            end
+            targetSwitchTime = now
+        end
+
+        -- Teleport into legs
+        if currentTarget and currentTarget.leg and currentTarget.leg.Parent then
+            root.CFrame = currentTarget.leg.CFrame
+        end
+    end)
+end
+
+local function stopAutoWinLoop()
+    if autoWinLoop then
+        autoWinLoop:Disconnect()
+        autoWinLoop = nil
+    end
+    currentTarget = nil
+    lastClickTime = 0
+    targetSwitchTime = 0
+end
+-- ==================== END AUTO WIN LOOP ====================
 
 RunService.RenderStepped:Connect(function()
     -- FOV Changer
@@ -419,54 +518,11 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- AFK System
-    if lp.Character then
+    -- Safe Zone (kept in RenderStepped - simple and safe)
+    if lp.Character and Settings.AFK.SafeZoneEnabled then
         local root = lp.Character:FindFirstChild("HumanoidRootPart")
         if root then
-            local now = tick()
-
-            if Settings.AFK.AutoWinEnabled then
-                root.CFrame = root.CFrame * CFrame.Angles(0, 0.25, 0)
-
-                if now - lastClickTime >= 0.1 then
-                    mouse1press()
-                    task.delay(0.015, mouse1release)
-                    lastClickTime = now
-                end
-
-                if now - targetSwitchTime >= 2 then
-                    local targets = {}
-                    for _, p in ipairs(Players:GetPlayers()) do
-                        if p ~= lp and p.Character and isEnemy(p) then
-                            local hum = p.Character:FindFirstChildOfClass("Humanoid")
-                            if hum and hum.Health > 0 then
-                                local leg = p.Character:FindFirstChild("LeftLowerLeg") 
-                                         or p.Character:FindFirstChild("RightLowerLeg")
-                                         or p.Character:FindFirstChild("LeftFoot")
-                                         or p.Character:FindFirstChild("RightFoot")
-                                         or p.Character:FindFirstChild("HumanoidRootPart")
-                                if leg then
-                                    table.insert(targets, {leg = leg})
-                                end
-                            end
-                        end
-                    end
-                    if #targets > 0 then
-                        currentTarget = targets[math.random(1, #targets)]
-                    else
-                        currentTarget = nil
-                    end
-                    targetSwitchTime = now
-                end
-
-                if currentTarget and currentTarget.leg and currentTarget.leg.Parent then
-                    root.CFrame = currentTarget.leg.CFrame
-                end
-            end
-
-            if Settings.AFK.SafeZoneEnabled then
-                root.CFrame = CFrame.new(-15, 297, 179)
-            end
+            root.CFrame = CFrame.new(-15, 297, 179)
         end
     end
 
@@ -577,21 +633,19 @@ Players.PlayerRemoving:Connect(function(p)
 end)
 
 -- ==================== CUSTOM CURSOR LOGIC ====================
--- Apply cursor when enabled
 local function updateCursor()
     if Settings.CursorCrosshair.Enabled then
         local id = Settings.CursorCrosshair.CustomID ~= "" and Settings.CursorCrosshair.CustomID or CursorPresets[Settings.CursorCrosshair.Preset]
         if id and id ~= "" then
             mouse.Icon = id
         else
-            mouse.Icon = defaultCursor  -- fallback
+            mouse.Icon = defaultCursor
         end
     else
-        mouse.Icon = defaultCursor  -- reset to default
+        mouse.Icon = defaultCursor
     end
 end
 
--- Initial update
 updateCursor()
 
 -- ==================== UI CONTROLS ====================
@@ -626,10 +680,15 @@ MiscSection:NewToggle("Team Check", "Ignore teammates (Aimbot / Trigger / ESP / 
 end)
 
 -- AFK Tab
-AutoWinSection:NewToggle("Auto Win / Kill", "Loop teleport INTO random enemy legs + spin + auto click", function(v)
+AutoWinSection:NewToggle("Auto Win / Kill", "Loop TP to enemy legs + spin + auto click + auto-equip first tool", function(v)
     Settings.AFK.AutoWinEnabled = v
-    if not v then
-        currentTarget = nil
+    
+    if v then
+        equipFirstTool()
+        startAutoWinLoop()
+    else
+        stopAutoWinLoop()
+        unequipCurrentTool()
         if lp.Character then
             lp.Character:BreakJoints()
         end
@@ -750,7 +809,6 @@ ChamsSection:NewSlider("Fill Transparency", "0-1", 10, 0, function(v)
     Settings.ESP.Chams.FillTrans = v/10
 end)
 
--- NEW Cursor Crosshair UI (replaces old drawing crosshair)
 CursorSection:NewToggle("Custom Cursor Crosshair", "Replaces your mouse cursor with a Roblox catalog crosshair", function(v)
     Settings.CursorCrosshair.Enabled = v
     updateCursor()
@@ -758,7 +816,7 @@ end)
 
 CursorSection:NewDropdown("Preset Crosshair", "Choose from popular Roblox catalog ones", {"Default","Simple +","Medium Cross","Small Dot","Glow Circle","Green Dot","Hello Kitty","Meme Funny","Classic CB"}, function(v)
     Settings.CursorCrosshair.Preset = v
-    Settings.CursorCrosshair.CustomID = ""  -- clear custom if preset selected
+    Settings.CursorCrosshair.CustomID = ""
     updateCursor()
 end)
 
@@ -773,7 +831,6 @@ end)
 CursorSection:NewLabel("Tip: Use IDs from Roblox catalog (decals/images)")
 CursorSection:NewLabel("Popular ones: 1827745864 (classic +), 4048495272, 10891594364 (glow)")
 CursorSection:NewLabel("Hello Kitty style: 11351620355")
-CursorSection:NewLabel("Works best in first-person / aim-heavy games")
 
 -- Movement Tab
 SpeedSection:NewToggle("Speed Hack", "Change WalkSpeed", function(v)
@@ -820,34 +877,40 @@ AdvancedMovementSection:NewSlider("CFrame Speed", "", 120, 10, function(v)
     Settings.Movement.CFrameSpeedValue = v
 end)
 
--- Teleports Tab
+-- Teleports Tab (Torso-centered fix applied)
 PlayerTPSection:NewTextBox("Player Name", "Exact username (case insensitive)", function(val)
     tpTargetName = val
 end)
 
-PlayerTPSection:NewButton("Teleport to Player", "Teleports you directly above the player", function()
+PlayerTPSection:NewButton("Teleport to Player", "Teleports you DIRECTLY CENTERED into the player's torso", function()
     if tpTargetName == "" then return end
     for _, p in ipairs(Players:GetPlayers()) do
         if p.Name:lower() == tpTargetName:lower() and p ~= lp then
-            if p.Character and p.Character:FindFirstChild("HumanoidRootPart") and lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
-                lp.Character.HumanoidRootPart.CFrame = p.Character.HumanoidRootPart.CFrame * CFrame.new(0, 5, 0)
+            if p.Character and lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
+                local targetPart = p.Character:FindFirstChild("UpperTorso") or p.Character:FindFirstChild("Torso") or p.Character:FindFirstChild("HumanoidRootPart")
+                if targetPart then
+                    lp.Character.HumanoidRootPart.CFrame = targetPart.CFrame
+                end
             end
             return
         end
     end
 end)
 
-PlayerTPSection:NewButton("Teleport to Random Enemy", "Teleports to a random enemy (respects Team Check)", function()
+PlayerTPSection:NewButton("Teleport to Random Enemy", "Teleports you DIRECTLY CENTERED into a random enemy's torso (respects Team Check)", function()
     local candidates = {}
     for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= lp and isEnemy(p) and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+        if p ~= lp and isEnemy(p) and p.Character then
             table.insert(candidates, p)
         end
     end
     if #candidates > 0 then
         local chosen = candidates[math.random(1, #candidates)]
         if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
-            lp.Character.HumanoidRootPart.CFrame = chosen.Character.HumanoidRootPart.CFrame * CFrame.new(0, 5, 0)
+            local targetPart = chosen.Character:FindFirstChild("UpperTorso") or chosen.Character:FindFirstChild("Torso") or chosen.Character:FindFirstChild("HumanoidRootPart")
+            if targetPart then
+                lp.Character.HumanoidRootPart.CFrame = targetPart.CFrame
+            end
         end
     end
 end)
@@ -873,4 +936,3 @@ CameraFOVSection:NewLabel("Higher values = wider view")
 CameraFOVSection:NewLabel("Lower values = zoomed in feel")
 
 -- End of script
-print("Vanta Ability Test v2.3 loaded successfully! (Custom Cursor Crosshair from Roblox catalog)")
