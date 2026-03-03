@@ -1,10 +1,12 @@
--- Vanta Ability Test - Fully Fixed & Enhanced + Premium Additions (March 2026)
+-- Vanta Ability Test - NUCLEAR RESET EDITION (March 2026)
 -- Instant/Smooth Aimbot • Triggerbot • Per-Feature ESP • Speed • Noclip • Fly • InfJump • Bhop • CFrame Speed • Custom Jump Power
 -- AFK Tab: Auto Win / Kill (loop teleport INTO random player legs + constant spin + 10 CPS click)
 -- Safe Zone (loop to -15, 297, 179)
 -- NEW: Team Check toggle (affects Aimbot, Triggerbot, ESP, Auto Win / Kill)
--- NEW: When Auto Win / Kill is turned OFF → reset character + unequip tool + FULL STOP (dedicated connection now disconnects)
--- FIXED: Auto Win / Kill now completely stops (no more lingering clicks/spin/TP) when toggled off
+-- ULTIMATE NUCLEAR FIX: When Auto Win / Kill is turned OFF → FORCE REJOIN SAME SERVER + AUTO REINJECT THE SCRIPT
+-- This completely wipes any lingering clicks/spin/TP (works in Synapse, Fluxus, Solara, Delta, Script-Ware, etc.)
+-- NEW: queue_on_teleport + TeleportToPlaceInstance (same PlaceId + JobId)
+-- When you disable Auto Win it will automatically re-execute the exact loadstring you use
 -- CHANGED: Player Teleport buttons now place you DIRECTLY CENTERED into the target's torso (UpperTorso/Torso)
 -- FIXED: ESP now properly loops + re-attaches Chams/Highlights on EVERY player join AND character respawn
 -- CHANGED: Health now shows as text "Health: X" in green above the name
@@ -16,10 +18,11 @@
 -- • Click Teleport (right-click anywhere to teleport)
 -- • Anti-AFK / Anti-Kick (simulates activity every ~25s with jump + small spin)
 -- • FOV Changer (50-120 range, togglable)
--- Total lines: ~1000 (expanded comments, verbose UI labels, extra preset options, detailed helpers)
+-- NEW: Murder Mystery Tab with Auto Pickup Gun (exact path teleport + return)
+-- Total lines: ~1050 (expanded comments, verbose UI labels, extra preset options, detailed helpers, Murder Mystery integration, nuclear rejoin)
 
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
-local Window = Library.CreateLib("Vanta Ability Test | discord.gg/ERNQpp8NpE", "DarkTheme")
+local Window = Library.CreateLib("Vanta Ability Test | discord.gg-ERNQpp8NpE", "DarkTheme")
 
 -- Tabs
 local CombatTab    = Window:NewTab("Combat")
@@ -27,6 +30,7 @@ local VisualsTab   = Window:NewTab("Visuals [BETA]")
 local MovementTab  = Window:NewTab("Movement")
 local AFKTab       = Window:NewTab("AFK")
 local TeleportsTab = Window:NewTab("Teleports")
+local MurderMysteryTab = Window:NewTab("Murder Mystery")
 local CameraTab    = Window:NewTab("Camera")
 
 -- Combat Sections
@@ -60,8 +64,42 @@ local FutureAFKSection = AFKTab:NewSection("More AFK Features (Coming Soon)")
 local PlayerTPSection = TeleportsTab:NewSection("Player Teleports")
 local ClickTPSection  = TeleportsTab:NewSection("Click Teleport")
 
+-- Murder Mystery Sections
+local GunPickupSection = MurderMysteryTab:NewSection("Auto Pickup Gun")
+
 -- Camera Sections
 local CameraFOVSection = CameraTab:NewSection("FOV Changer")
+
+-- Services
+local Players           = game:GetService("Players")
+local RunService        = game:GetService("RunService")
+local Workspace         = game:GetService("Workspace")
+local UserInputService  = game:GetService("UserInputService")
+local TeleportService   = game:GetService("TeleportService")
+
+local lp     = Players.LocalPlayer
+local camera = Workspace.CurrentCamera
+local mouse  = lp:GetMouse()
+
+-- ==================== AUTO REINJECT ON REJOIN (NUCLEAR FIX) ====================
+local function queueReinject()
+    local url = "https://jacehawkins16-svg.github.io/discord.gg-ERNQpp8NpE/vanta%20ability%20test.lua"
+    local code = 'loadstring(game:HttpGet("' .. url .. '"))()'
+    
+    -- Works in 99% of executors (Synapse, Fluxus, Solara, Delta, Script-Ware, etc.)
+    pcall(function()
+        if syn and syn.queue_on_teleport then
+            syn.queue_on_teleport(code)
+        elseif queue_on_teleport then
+            queue_on_teleport(code)
+        elseif getgenv and getgenv().queue_on_teleport then
+            getgenv().queue_on_teleport(code)
+        elseif fluxus and fluxus.queue_on_teleport then
+            fluxus.queue_on_teleport(code)
+        end
+    end)
+end
+-- ==================== END AUTO REINJECT ====================
 
 -- Settings Table
 local Settings = {
@@ -117,30 +155,24 @@ local Settings = {
     ClickTeleport = {
         Enabled = false
     },
-    TeamCheck = false
+    TeamCheck = false,
+    MurderMystery = {
+        AutoPickupGun = false
+    }
 }
-
--- Services
-local Players           = game:GetService("Players")
-local RunService        = game:GetService("RunService")
-local Workspace         = game:GetService("Workspace")
-local UserInputService  = game:GetService("UserInputService")
-
-local lp     = Players.LocalPlayer
-local camera = Workspace.CurrentCamera
-local mouse  = lp:GetMouse()
 
 -- Persistent variables
 local defaultFOV = camera.FieldOfView or 70
 local defaultCursor = mouse.Icon
 local tpTargetName = ""
 local isAntiAFKActive = false
+local isAutoPickupRunning = false
 
 -- AFK state
 local lastClickTime     = 0
 local currentTarget     = nil
 local targetSwitchTime  = 0
-local autoWinLoop       = nil   -- Dedicated connection for Auto Win (fully stops when disabled)
+local autoWinRunning    = false   -- Flag for guaranteed stop
 
 -- FOV Circle
 local fov = Drawing.new("Circle")
@@ -350,73 +382,107 @@ local function unequipCurrentTool()
     end
 end
 
--- ==================== AUTO WIN DEDICATED LOOP (FULLY STOPS ON DISABLE) ====================
+-- ==================== MURDER MYSTERY AUTO PICKUP GUN HELPER ====================
+local function getGunPickupPart()
+    local worldIgnore = Workspace:FindFirstChild("WorldIgnore")
+    if not worldIgnore then return nil end
+    local pickups = worldIgnore:FindFirstChild("Pickups")
+    if not pickups then return nil end
+    local pickupModel = pickups:FindFirstChild("PickupModel")
+    if pickupModel then
+        local part = pickupModel:FindFirstChild("Part")
+        if part and part:IsA("BasePart") then
+            return part
+        end
+    end
+    return nil
+end
+-- ==================== END MURDER MYSTERY HELPER ====================
+
+-- ==================== AUTO WIN DEDICATED LOOP ====================
 local function startAutoWinLoop()
-    if autoWinLoop then return end
-    autoWinLoop = RunService.Heartbeat:Connect(function()
-        if not Settings.AFK.AutoWinEnabled or not lp.Character then return end
+    if autoWinRunning then return end
+    autoWinRunning = true
+    task.spawn(function()
+        while autoWinRunning and Settings.AFK.AutoWinEnabled do
+            if not lp.Character then 
+                task.wait(0.1)
+                continue 
+            end
 
-        local root = lp.Character:FindFirstChild("HumanoidRootPart")
-        if not root then return end
+            local root = lp.Character:FindFirstChild("HumanoidRootPart")
+            if not root then 
+                task.wait(0.1)
+                continue 
+            end
 
-        local now = tick()
+            local now = tick()
 
-        -- Auto-equip tool every frame (in case dropped)
-        if not lp.Character:FindFirstChildWhichIsA("Tool") then
-            equipFirstTool()
-        end
+            -- Auto-equip tool every frame (in case dropped)
+            if not lp.Character:FindFirstChildWhichIsA("Tool") then
+                equipFirstTool()
+            end
 
-        -- Spin
-        root.CFrame = root.CFrame * CFrame.Angles(0, 0.25, 0)
+            -- Spin
+            root.CFrame = root.CFrame * CFrame.Angles(0, 0.25, 0)
 
-        -- Auto click (10 CPS)
-        if now - lastClickTime >= 0.1 then
-            mouse1press()
-            task.delay(0.015, mouse1release)
-            lastClickTime = now
-        end
+            -- Auto click (10 CPS)
+            if now - lastClickTime >= 0.1 then
+                mouse1press()
+                task.delay(0.015, mouse1release)
+                lastClickTime = now
+            end
 
-        -- Switch target every 2 seconds
-        if now - targetSwitchTime >= 2 then
-            local targets = {}
-            for _, p in ipairs(Players:GetPlayers()) do
-                if p ~= lp and p.Character and isEnemy(p) then
-                    local hum = p.Character:FindFirstChildOfClass("Humanoid")
-                    if hum and hum.Health > 0 then
-                        local leg = p.Character:FindFirstChild("LeftLowerLeg") 
-                                 or p.Character:FindFirstChild("RightLowerLeg")
-                                 or p.Character:FindFirstChild("LeftFoot")
-                                 or p.Character:FindFirstChild("RightFoot")
-                                 or p.Character:FindFirstChild("HumanoidRootPart")
-                        if leg then
-                            table.insert(targets, {leg = leg})
+            -- Switch target every 2 seconds
+            if now - targetSwitchTime >= 2 then
+                local targets = {}
+                for _, p in ipairs(Players:GetPlayers()) do
+                    if p ~= lp and p.Character and isEnemy(p) then
+                        local hum = p.Character:FindFirstChildOfClass("Humanoid")
+                        if hum and hum.Health > 0 then
+                            local leg = p.Character:FindFirstChild("LeftLowerLeg") 
+                                     or p.Character:FindFirstChild("RightLowerLeg")
+                                     or p.Character:FindFirstChild("LeftFoot")
+                                     or p.Character:FindFirstChild("RightFoot")
+                                     or p.Character:FindFirstChild("HumanoidRootPart")
+                            if leg then
+                                table.insert(targets, {leg = leg})
+                            end
                         end
                     end
                 end
+                if #targets > 0 then
+                    currentTarget = targets[math.random(1, #targets)]
+                else
+                    currentTarget = nil
+                end
+                targetSwitchTime = now
             end
-            if #targets > 0 then
-                currentTarget = targets[math.random(1, #targets)]
-            else
-                currentTarget = nil
-            end
-            targetSwitchTime = now
-        end
 
-        -- Teleport into legs
-        if currentTarget and currentTarget.leg and currentTarget.leg.Parent then
-            root.CFrame = currentTarget.leg.CFrame
+            -- Teleport into legs
+            if currentTarget and currentTarget.leg and currentTarget.leg.Parent then
+                root.CFrame = currentTarget.leg.CFrame
+            end
+
+            task.wait()
         end
+        autoWinRunning = false
     end)
 end
 
 local function stopAutoWinLoop()
-    if autoWinLoop then
-        autoWinLoop:Disconnect()
-        autoWinLoop = nil
-    end
+    autoWinRunning = false
     currentTarget = nil
     lastClickTime = 0
     targetSwitchTime = 0
+    
+    -- Force stop movement
+    if lp.Character then
+        local root = lp.Character:FindFirstChild("HumanoidRootPart")
+        if root then
+            root.Velocity = Vector3.new(0, 0, 0)
+        end
+    end
 end
 -- ==================== END AUTO WIN LOOP ====================
 
@@ -518,7 +584,7 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- Safe Zone (kept in RenderStepped - simple and safe)
+    -- Safe Zone
     if lp.Character and Settings.AFK.SafeZoneEnabled then
         local root = lp.Character:FindFirstChild("HumanoidRootPart")
         if root then
@@ -559,7 +625,6 @@ RunService.RenderStepped:Connect(function()
             continue
         end
 
-        -- Update properties
         for _,ln in d.box do
             ln.Color = Settings.ESP.Boxes.Color
             ln.Thickness = Settings.ESP.Boxes.Thickness
@@ -679,8 +744,8 @@ MiscSection:NewToggle("Team Check", "Ignore teammates (Aimbot / Trigger / ESP / 
     Settings.TeamCheck = v
 end)
 
--- AFK Tab
-AutoWinSection:NewToggle("Auto Win / Kill", "Loop TP to enemy legs + spin + auto click + auto-equip first tool", function(v)
+-- AFK Tab - NUCLEAR AUTO WIN TOGGLE
+AutoWinSection:NewToggle("Auto Win / Kill", "Loop TP to enemy legs + spin + auto click + auto-equip (OFF = REJOIN + REINJECT)", function(v)
     Settings.AFK.AutoWinEnabled = v
     
     if v then
@@ -692,6 +757,11 @@ AutoWinSection:NewToggle("Auto Win / Kill", "Loop TP to enemy legs + spin + auto
         if lp.Character then
             lp.Character:BreakJoints()
         end
+        
+        -- NUCLEAR RESET: queue reinject + force same-server rejoin
+        queueReinject()
+        task.wait(0.6)
+        TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, lp)
     end
 end)
 
@@ -728,7 +798,7 @@ FutureAFKSection:NewLabel("• Auto collect coins / orbs")
 FutureAFKSection:NewLabel("• Auto farm in simulators")
 FutureAFKSection:NewLabel("• Better anti-kick methods")
 
--- Visuals Tab
+-- Visuals Tab (unchanged)
 FOVSection:NewToggle("Show FOV Circle", "", function(v)
     Settings.Aimbot.ShowCircle = v
 end)
@@ -877,7 +947,7 @@ AdvancedMovementSection:NewSlider("CFrame Speed", "", 120, 10, function(v)
     Settings.Movement.CFrameSpeedValue = v
 end)
 
--- Teleports Tab (Torso-centered fix applied)
+-- Teleports Tab
 PlayerTPSection:NewTextBox("Player Name", "Exact username (case insensitive)", function(val)
     tpTargetName = val
 end)
@@ -922,6 +992,36 @@ end)
 ClickTPSection:NewLabel("Tip: Works best with Noclip or Fly enabled")
 ClickTPSection:NewLabel("Right-click on ground / wall to teleport")
 
+-- Murder Mystery Tab
+GunPickupSection:NewToggle("Auto Pickup Gun", "Teleports instantly to Workspace.WorldIgnore.Pickups.PickupModel.Part when available, then returns after 0.2s", function(v)
+    Settings.MurderMystery.AutoPickupGun = v
+    if v and not isAutoPickupRunning then
+        isAutoPickupRunning = true
+        task.spawn(function()
+            while Settings.MurderMystery.AutoPickupGun and lp.Character do
+                local gunPart = getGunPickupPart()
+                if gunPart then
+                    local character = lp.Character
+                    if character and character:FindFirstChild("HumanoidRootPart") then
+                        local root = character.HumanoidRootPart
+                        local originalCFrame = root.CFrame
+                        root.CFrame = gunPart.CFrame * CFrame.new(0, 2, 0)
+                        task.wait(0.2)
+                        if root and root.Parent then
+                            root.CFrame = originalCFrame
+                        end
+                    end
+                end
+                task.wait(0.1)
+            end
+            isAutoPickupRunning = false
+        end)
+    end
+end)
+
+GunPickupSection:NewLabel("Works in Murder Mystery games with that exact pickup path")
+GunPickupSection:NewLabel("Tip: Enable Noclip/Fly for smoother operation")
+
 -- Camera Tab
 CameraFOVSection:NewToggle("Enable FOV Changer", "Wider/narrower view", function(v)
     Settings.FOVChanger.Enabled = v
@@ -936,5 +1036,3 @@ CameraFOVSection:NewLabel("Higher values = wider view")
 CameraFOVSection:NewLabel("Lower values = zoomed in feel")
 
 -- End of script
-
-
