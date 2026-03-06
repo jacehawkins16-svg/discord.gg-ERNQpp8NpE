@@ -1,9 +1,3 @@
--- Vanta Ability Test - NUCLEAR RESET EDITION (March 2026)
--- FIXED AUTO WIN / KILL: Player now teleports DIRECTLY UNDER target's feet + lays down flat on back FACING UPWARDS (looking straight up at the player)
--- + TURNED AROUND 180 DEGREES (body rotation flipped exactly as requested)
--- All other features 100% untouched (Aimbot, ESP, Murder Mystery roles, Nuclear rejoin, Custom Cursor, etc.)
--- Total lines: ~1100 (ready to copy-paste)
-
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
 local Window = Library.CreateLib("Vanta Ability Test | discord.gg-ERNQpp8NpE", "DarkTheme")
 
@@ -212,16 +206,6 @@ local function isVisible(targetPart, targetPlr)
     if not result then return true end
     if result.Instance:IsDescendantOf(targetPlr.Character) then return true end
     return false
-end
-
-local function validTriggerHit(res)
-    if not (res and res.Instance) then return false end
-    local mdl = res.Instance:FindFirstAncestorWhichIsA("Model")
-    if not mdl then return false end
-    local plr = Players:GetPlayerFromCharacter(mdl)
-    if not (plr and plr ~= lp and isEnemy(plr)) then return false end
-    local h = mdl:FindFirstChildOfClass("Humanoid")
-    return h and h.Health > 0
 end
 
 local function findClosest()
@@ -517,6 +501,8 @@ local function stopAutoWinLoop()
 end
 -- ==================== END AUTO WIN LOOP ====================
 
+local Clicked = false
+
 RunService.RenderStepped:Connect(function()
     -- FOV Changer
     if Settings.FOVChanger.Enabled then
@@ -535,17 +521,22 @@ RunService.RenderStepped:Connect(function()
 
     -- Triggerbot
     if Settings.Triggerbot.Enabled then
-        local ray = camera:ViewportPointToRay(mouse.X, mouse.Y)
-        local rp = RaycastParams.new()
-        rp.FilterType = Enum.RaycastFilterType.Exclude
-        rp.FilterDescendantsInstances = {camera, lp.Character or game}
-        rp.IgnoreWater = true
-
-        local hit = Workspace:Raycast(ray.Origin, ray.Direction * 12000, rp)
-        if validTriggerHit(hit) then
-            mouse1press()
-            task.delay(0.018, mouse1release)
+        if mouse.Target then
+            local targetParent = mouse.Target.Parent
+            local humanoid = targetParent:FindFirstChildOfClass("Humanoid") or (targetParent.Parent and targetParent.Parent:FindFirstChildOfClass("Humanoid"))
+            if humanoid and targetParent.Name ~= lp.Name then
+                local plr = Players:GetPlayerFromCharacter(humanoid.Parent)
+                if plr and plr ~= lp and isEnemy(plr) and humanoid.Health >= 1 then
+                    mouse1press()
+                    Clicked = false
+                end
+            end
         end
+        if not Clicked then
+            mouse1release()
+        end
+    elseif not Settings.Triggerbot.Enabled and mouse.Target and (mouse.Target.Parent:FindFirstChildOfClass("Humanoid") or mouse.Target.Parent.Parent:FindFirstChildOfClass("Humanoid")) then
+        Clicked = true
     end
 
     -- Aimbot
