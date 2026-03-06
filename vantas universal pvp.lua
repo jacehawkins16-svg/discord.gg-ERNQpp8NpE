@@ -126,6 +126,9 @@ local Settings = {
     },
     ClickTeleport = {
         Enabled = false
+    },
+    Invisible = {
+        Enabled = false
     }
 }
 
@@ -448,6 +451,76 @@ end
 -- (functions defined above)
 -- ==================== END FIXED NOCLIP ====================
 
+-- Invisible exploit from invis v2.lua
+local seatTeleportPosition = Vector3.new(-25.95, 400, 3537.55)
+local voidLevelYThreshold = -50
+local invis_transparency = 0.75
+local isInvisibleEnabled = false
+
+local function setCharacterTransparency(char, transparency)
+    for _, part in pairs(char:GetDescendants()) do
+        if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+            part.Transparency = transparency
+        end
+    end
+end
+
+local function makeInvisible(char)
+    setCharacterTransparency(char, invis_transparency)
+    local humanoidRootPart = char:WaitForChild("HumanoidRootPart")
+    local savedpos = humanoidRootPart.CFrame
+    task.wait(0.05)
+    pcall(function() char:MoveTo(seatTeleportPosition) end)
+    task.wait(0.05)
+    if not char:FindFirstChild("HumanoidRootPart") or char.HumanoidRootPart.Position.Y < voidLevelYThreshold then
+        pcall(function() char:MoveTo(savedpos.Position) end)
+        return
+    end
+    local Seat = Instance.new('Seat')
+    Seat.Parent = workspace
+    Seat.Anchored = false
+    Seat.CanCollide = false
+    Seat.Name = 'invischair'
+    Seat.Transparency = 1
+    Seat.Position = seatTeleportPosition
+    local Weld = Instance.new("Weld")
+    Weld.Part0 = Seat
+    local torso = char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
+    if torso then
+        Weld.Part1 = torso
+        Weld.Parent = Seat
+        task.wait()
+        pcall(function() Seat.CFrame = savedpos end)
+    else
+        Seat:Destroy()
+    end
+    char.DescendantAdded:Connect(function(desc)
+        if isInvisibleEnabled and desc:IsA("BasePart") and desc.Name ~= "HumanoidRootPart" then
+            desc.Transparency = invis_transparency
+        end
+    end)
+    task.spawn(function()
+        while task.wait(0.5) do
+            if not isInvisibleEnabled then break end
+            if not char or not char.Parent then break end
+            setCharacterTransparency(char, invis_transparency)
+        end
+    end)
+end
+
+local function disableInvisible(char)
+    if not char then return end
+    setCharacterTransparency(char, 0)
+    local seat = workspace:FindFirstChild("invischair")
+    if seat then seat:Destroy() end
+end
+
+lp.CharacterAdded:Connect(function(char)
+    if isInvisibleEnabled then
+        makeInvisible(char)
+    end
+end)
+
 -- ESP RENDER + ALL OTHER LOGIC
 RunService.RenderStepped:Connect(function()
     -- NEW TRIGGERBOT (from triggerbot.lua - safe, no raycast, no self-hit, holds while on target)
@@ -692,6 +765,21 @@ end)
 
 AimbotSection:NewSlider("Smoothness", "100 = instant snap", 100, 0, function(v)
     Settings.Aimbot.Smooth = v / 100
+end)
+
+MiscSection:NewToggle("Invisible", "Makes you partially invisible using seat glitch", function(v)
+    Settings.Invisible.Enabled = v
+    isInvisibleEnabled = v
+    local char = lp.Character
+    if v then
+        if char then
+            makeInvisible(char)
+        end
+    else
+        if char then
+            disableInvisible(char)
+        end
+    end
 end)
 
 -- AFK Tab
