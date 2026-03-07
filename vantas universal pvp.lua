@@ -1,15 +1,7 @@
--- Vanta Universal - NUCLEAR RESET EDITION (March 2026) - FULLY FIXED
--- Fixes applied:
--- • Game freezing every short period → Replaced old raycast triggerbot with lightweight mouse.Target version from triggerbot.lua (no more expensive 12000-stud raycast every frame)
--- • Performance issues → Removed heavy per-frame raycast + optimized triggerbot + cursor now enforced safely every frame
--- • Changed triggerbot to exact logic from triggerbot.lua (safe, self-hit protected, holds while on target)
--- • Custom crosshair/preset not working → Now enforced every RenderStepped frame (games often reset mouse.Icon)
--- • Noclip buggy / inconsistent on/off → Completely rewritten with Stepped connection + dynamic part tracking (works on respawn, tools, new parts, perfect toggle)
-
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
 local Window = Library.CreateLib("Vanta Universal [Beta] | discord.gg-ERNQpp8NpE", "DarkTheme")
 
--- Tabs & Sections (unchanged)
+
 local CombatTab    = Window:NewTab("Combat")
 local VisualsTab   = Window:NewTab("Visuals [BETA]")
 local MovementTab  = Window:NewTab("Movement")
@@ -141,7 +133,7 @@ local lastClickTime     = 0
 local currentTarget     = nil
 local targetSwitchTime  = 0
 local autoWinRunning    = false
-local triggerClicked    = false   -- for new triggerbot
+local wasOnValidTarget  = false   -- NEW for state-based triggerbot
 
 -- Noclip (NEW FIXED VERSION)
 local noclipConn = nil
@@ -523,7 +515,7 @@ end)
 
 -- ESP RENDER + ALL OTHER LOGIC
 RunService.RenderStepped:Connect(function()
-    -- NEW TRIGGERBOT (from triggerbot.lua - safe, no raycast, no self-hit, holds while on target)
+    -- NEW STATE-BASED TRIGGERBOT (holds while on target, only calls press/release on state change to avoid input conflicts)
     local isOnValidTarget = false
     if mouse.Target and lp.Character and not mouse.Target:IsDescendantOf(lp.Character) then
         local par = mouse.Target.Parent
@@ -538,14 +530,14 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    if isOnValidTarget and Settings.Triggerbot.Enabled then
-        mouse1press()
-        triggerClicked = false
-    elseif Settings.Triggerbot.Enabled and not triggerClicked then
-        mouse1release()
-    elseif not Settings.Triggerbot.Enabled and isOnValidTarget then
-        triggerClicked = true
+    if Settings.Triggerbot.Enabled then
+        if isOnValidTarget and not wasOnValidTarget then
+            mouse1press()
+        elseif not isOnValidTarget and wasOnValidTarget then
+            mouse1release()
+        end
     end
+    wasOnValidTarget = isOnValidTarget
 
     -- FOV Changer
     if Settings.FOVChanger.Enabled then
@@ -745,6 +737,10 @@ end)
 -- Combat Tab
 TriggerSection:NewToggle("Triggerbot", "Shoot when crosshair on valid target", function(v)
     Settings.Triggerbot.Enabled = v
+    if not v and wasOnValidTarget then
+        mouse1release()
+        wasOnValidTarget = false
+    end
 end)
 
 AimbotSection:NewToggle("Aimbot", "Lock onto closest in FOV", function(v)
