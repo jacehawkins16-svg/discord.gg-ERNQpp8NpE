@@ -569,7 +569,11 @@ RunService.RenderStepped:Connect(function()
         local root = lp.Character:FindFirstChild("HumanoidRootPart")
 
         if hum and root then
-            hum.WalkSpeed = Settings.Movement.Enabled and Settings.Movement.Value or Settings.Movement.Default
+            -- FIXED: Only set WalkSpeed when the Speed Hack toggle is ENABLED.
+            -- When disabled, we do NOTHING so the game can control its own WalkSpeed (fixes games where game sets 0 or custom value).
+            if Settings.Movement.Enabled then
+                hum.WalkSpeed = Settings.Movement.Value
+            end
 
             if Settings.Movement.Fly then
                 hum.PlatformStand = true
@@ -605,7 +609,11 @@ RunService.RenderStepped:Connect(function()
                 end
             end
 
-            hum.JumpPower = Settings.Movement.CustomJumpPower and Settings.Movement.JumpPower or 50
+            -- FIXED: Only set JumpPower when the Custom Jump Power toggle is ENABLED.
+            -- When disabled, we do NOTHING so the game can control its own JumpPower (prevents detection in games with non-50 default JumpPower).
+            if Settings.Movement.CustomJumpPower then
+                hum.JumpPower = Settings.Movement.JumpPower
+            end
 
             if Settings.Movement.Bhop then
                 if hum:GetState() ~= Enum.HumanoidStateType.Jumping and hum:GetState() ~= Enum.HumanoidStateType.Freefall then
