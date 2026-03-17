@@ -1,7 +1,3 @@
--- XENO-FIXED Discord Advertisement Bot (/bmf) - UPDATED
--- Radius: 5 studs | Height: 3 studs | + Anti-AFK (never gets kicked)
--- Paste this directly into XENO and hit Execute
-
 if not game:IsLoaded() then game.Loaded:Wait() end
 
 local Players = game:GetService("Players")
