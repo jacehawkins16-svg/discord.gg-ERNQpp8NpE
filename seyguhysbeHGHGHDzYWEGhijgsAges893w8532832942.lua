@@ -45,22 +45,22 @@ local function sendChat(message)
 	end
 end
 
--- 50 MESSAGES
+
 local messages = {
 	"BEST E-GIRLS IN /bmf", "HOTTEST ROBLOX GIRLS /bmf", "JOIN FOR E-GIRLS /bmf",
-	"ULTIMATE DISCORD /bmf", "TOP ROBLOX SERVER /bmf", "E-GIRL HEAVEN /bmf",
-	"BEST CHAT EVER /bmf", "FLIRTY FRIENDS /bmf", "ROBLOX DISCORD KING /bmf",
+	"ULTIMATE HUB /bmf", "TOP ROBLOX SERVER /bmf", "E-GIRL HEAVEN /bmf",
+	"BEST CHAT EVER /bmf", "FLIRTY FRIENDS /bmf", "ROBLOX HUB KING /bmf",
 	"GIRLS GALORE /bmf", "EPIC COMMUNITY /bmf", "JOIN NOW /bmf",
 	"THE BEST SERVER /bmf", "E-GIRLS UNITE /bmf", "FUN TIMES ONLY /bmf",
-	"HOT CHATS /bmf", "DISCORD ADVENTURE /bmf", "ROBLOX BESTIES /bmf",
+	"HOT CHATS /bmf", "HUB ADVENTURE /bmf", "ROBLOX BESTIES /bmf",
 	"E-GIRL LOVERS /bmf", "PREMIUM SERVER /bmf", "BEST FRIENDS /bmf",
 	"GIRL POWER /bmf", "JOIN THE FUN /bmf", "TOP E-GIRLS /bmf",
-	"AMAZING DISCORD /bmf", "ROBLOX PARTY /bmf", "E-GIRL CENTRAL /bmf",
+	"AMAZING HUB /bmf", "ROBLOX PARTY /bmf", "E-GIRL CENTRAL /bmf",
 	"BEST PLACE /bmf", "CHAT WITH GIRLS /bmf", "ULTIMATE FUN /bmf",
-	"DISCORD GOALS /bmf", "HOT ROBLOX /bmf", "E-GIRLS FOR DAYS /bmf",
-	"BEST SERVER EVER /bmf", "JOIN DISCORD /bmf", "GIRL CHATS /bmf",
+	"HUB GOALS /bmf", "HOT ROBLOX /bmf", "E-GIRLS FOR DAYS /bmf",
+	"BEST SERVER EVER /bmf", "JOIN HUB /bmf", "GIRL CHATS /bmf",
 	"ROBLOX SOCIAL /bmf", "THE /bmf EXPERIENCE", "E-GIRL PARADISE /bmf",
-	"FRIENDLY SERVER /bmf", "BEST E-GIRL HUB /bmf", "DISCORD MAGIC /bmf",
+	"FRIENDLY SERVER /bmf", "BEST E-GIRL HUB /bmf", "HUB MAGIC /bmf",
 	"ROBLOX GIRLS /bmf", "JOIN FOR GOOD TIMES /bmf", "TOP COMMUNITY /bmf",
 	"E-GIRLS AND MORE /bmf", "BEST IN ROBLOX /bmf", "SERVER OF DREAMS /bmf",
 	"HOT AND FUN /bmf", "DONT MISS OUT /bmf"
