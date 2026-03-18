@@ -15,33 +15,30 @@ local player = Players.LocalPlayer
 local mouse = player:GetMouse()
 
 _G.triggerbot = true
-local isClicked = false
 
--- NEW: Player to completely ignore (both triggerbot + aimbot)
+-- Cleaner triggerbot state
+local holdingClick = false
+
+-- Player to completely ignore (both triggerbot + aimbot)
 local IGNORE_USERID = 1866969136
 
 local function getHumanoid(target)
     if not target then return nil, nil end
-    local parent = target.Parent
-    if not parent then return nil, nil end
-    
-    local humanoid = parent:FindFirstChildOfClass("Humanoid")
-    if humanoid then
-        return humanoid, parent
-    end
-    
-    if parent.Parent then
-        humanoid = parent.Parent:FindFirstChildOfClass("Humanoid")
+    local current = target
+    for _ = 1, 6 do
+        local humanoid = current:FindFirstChildOfClass("Humanoid")
         if humanoid then
-            return humanoid, parent.Parent
+            return humanoid, current
         end
+        if not current.Parent then break end
+        current = current.Parent
     end
     return nil, nil
 end
 
 local camera = workspace.CurrentCamera
 local FOV = 350
-local smoothness = 0.2
+local smoothness = 0.1   -- CHANGED: Lowered from 0.2 → much smoother/less snappy aim (feels more human)
 local isAiming = false
 
 local function isVisible(part, character)
@@ -61,44 +58,50 @@ local function isVisible(part, character)
 end
 
 RunService.RenderStepped:Connect(function()
+    -- === TRIGGERBOT ===
     if not _G.triggerbot then
-        if not isClicked then
+        if holdingClick then
             mouse1release()
-            isClicked = true
+            holdingClick = false
         end
     else
         local target = mouse.Target
         local humanoid, humParent = getHumanoid(target)
         
+        local shouldFire = false
         if humanoid 
            and humanoid.Health >= 1 
            and humParent 
            and humParent.Name ~= player.Name 
            and humParent ~= player.Character then
             
-            -- NEW: Ignore the specific player (UserId 1866969136)
             local targetPlayer = Players:GetPlayerFromCharacter(humParent)
-            if targetPlayer and targetPlayer.UserId == IGNORE_USERID then
-                -- do nothing (skip firing)
-            else
-                mouse1press()
-                isClicked = false
+            if not (targetPlayer and targetPlayer.UserId == IGNORE_USERID) then
+                shouldFire = true
             end
-        elseif not isClicked then
-            mouse1release()
-            isClicked = true
+        end
+
+        if shouldFire then
+            if not holdingClick then
+                mouse1press()
+                holdingClick = true
+            end
+        else
+            if holdingClick then
+                mouse1release()
+                holdingClick = false
+            end
         end
     end
     
+    -- === AIMBOT (now smoother) ===
     if isAiming then
         local aimTarget = nil
         local closestDist = math.huge
         for _, plr in ipairs(Players:GetPlayers()) do
-            -- NEW: Skip the ignored player
             if plr ~= player and plr.UserId ~= IGNORE_USERID and plr.Character then
                 local hum = plr.Character:FindFirstChildOfClass("Humanoid")
                 if hum and hum.Health >= 1 then
-                    -- torso (R15 / R6)
                     local torso = plr.Character:FindFirstChild("HumanoidRootPart") or plr.Character:FindFirstChild("Torso")
                     if torso then
                         if isVisible(torso, plr.Character) then
@@ -169,33 +172,30 @@ local player = Players.LocalPlayer
 local mouse = player:GetMouse()
 
 _G.triggerbot = true
-local isClicked = false
 
--- NEW: Player to completely ignore (both triggerbot + aimbot)
+-- Cleaner triggerbot state
+local holdingClick = false
+
+-- Player to completely ignore (both triggerbot + aimbot)
 local IGNORE_USERID = 1866969136
 
 local function getHumanoid(target)
     if not target then return nil, nil end
-    local parent = target.Parent
-    if not parent then return nil, nil end
-    
-    local humanoid = parent:FindFirstChildOfClass("Humanoid")
-    if humanoid then
-        return humanoid, parent
-    end
-    
-    if parent.Parent then
-        humanoid = parent.Parent:FindFirstChildOfClass("Humanoid")
+    local current = target
+    for _ = 1, 6 do
+        local humanoid = current:FindFirstChildOfClass("Humanoid")
         if humanoid then
-            return humanoid, parent.Parent
+            return humanoid, current
         end
+        if not current.Parent then break end
+        current = current.Parent
     end
     return nil, nil
 end
 
 local camera = workspace.CurrentCamera
 local FOV = 350
-local smoothness = 0.2
+local smoothness = 0.1   -- CHANGED: Lowered from 0.2 → much smoother/less snappy aim (feels more human)
 local isAiming = false
 
 local function isVisible(part, character)
@@ -215,40 +215,47 @@ local function isVisible(part, character)
 end
 
 RunService.RenderStepped:Connect(function()
+    -- === TRIGGERBOT ===
     if not _G.triggerbot then
-        if not isClicked then
+        if holdingClick then
             mouse1release()
-            isClicked = true
+            holdingClick = false
         end
     else
         local target = mouse.Target
         local humanoid, humParent = getHumanoid(target)
         
+        local shouldFire = false
         if humanoid 
            and humanoid.Health >= 1 
            and humParent 
            and humParent.Name ~= player.Name 
            and humParent ~= player.Character then
             
-            -- NEW: Ignore the specific player (UserId 1866969136)
             local targetPlayer = Players:GetPlayerFromCharacter(humParent)
-            if targetPlayer and targetPlayer.UserId == IGNORE_USERID then
-                -- do nothing (skip firing)
-            else
-                mouse1press()
-                isClicked = false
+            if not (targetPlayer and targetPlayer.UserId == IGNORE_USERID) then
+                shouldFire = true
             end
-        elseif not isClicked then
-            mouse1release()
-            isClicked = true
+        end
+
+        if shouldFire then
+            if not holdingClick then
+                mouse1press()
+                holdingClick = true
+            end
+        else
+            if holdingClick then
+                mouse1release()
+                holdingClick = false
+            end
         end
     end
     
+    -- === AIMBOT (now smoother) ===
     if isAiming then
         local aimTarget = nil
         local closestDist = math.huge
         for _, plr in ipairs(Players:GetPlayers()) do
-            -- NEW: Skip the ignored player
             if plr ~= player and plr.UserId ~= IGNORE_USERID and plr.Character then
                 local hum = plr.Character:FindFirstChildOfClass("Humanoid")
                 if hum and hum.Health >= 1 then
