@@ -17,6 +17,9 @@ local mouse = player:GetMouse()
 _G.triggerbot = true
 local isClicked = false
 
+-- NEW: Player to completely ignore (both triggerbot + aimbot)
+local IGNORE_USERID = 1866969136
+
 local function getHumanoid(target)
     if not target then return nil, nil end
     local parent = target.Parent
@@ -41,10 +44,10 @@ local FOV = 350
 local smoothness = 0.2
 local isAiming = false
 
-local function isVisible(head, character)
-    if not head or not character then return false end
+local function isVisible(part, character)
+    if not part or not character then return false end
     local origin = camera.CFrame.Position
-    local direction = head.Position - origin
+    local direction = part.Position - origin
     local raycastParams = RaycastParams.new()
     raycastParams.FilterDescendantsInstances = {player.Character}
     raycastParams.FilterType = Enum.RaycastFilterType.Exclude
@@ -73,8 +76,14 @@ RunService.RenderStepped:Connect(function()
            and humParent.Name ~= player.Name 
            and humParent ~= player.Character then
             
-            mouse1press()
-            isClicked = false
+            -- NEW: Ignore the specific player (UserId 1866969136)
+            local targetPlayer = Players:GetPlayerFromCharacter(humParent)
+            if targetPlayer and targetPlayer.UserId == IGNORE_USERID then
+                -- do nothing (skip firing)
+            else
+                mouse1press()
+                isClicked = false
+            end
         elseif not isClicked then
             mouse1release()
             isClicked = true
@@ -85,20 +94,22 @@ RunService.RenderStepped:Connect(function()
         local aimTarget = nil
         local closestDist = math.huge
         for _, plr in ipairs(Players:GetPlayers()) do
-            if plr ~= player and plr.Character then
+            -- NEW: Skip the ignored player
+            if plr ~= player and plr.UserId ~= IGNORE_USERID and plr.Character then
                 local hum = plr.Character:FindFirstChildOfClass("Humanoid")
                 if hum and hum.Health >= 1 then
-                    local head = plr.Character:FindFirstChild("Head")
-                    if head then
-                        if isVisible(head, plr.Character) then
-                            local screenPos = camera:WorldToScreenPoint(head.Position)
+                    -- torso (R15 / R6)
+                    local torso = plr.Character:FindFirstChild("HumanoidRootPart") or plr.Character:FindFirstChild("Torso")
+                    if torso then
+                        if isVisible(torso, plr.Character) then
+                            local screenPos = camera:WorldToScreenPoint(torso.Position)
                             if screenPos.Z > 0 then
                                 local screenVec = Vector2.new(screenPos.X, screenPos.Y)
                                 local center = camera.ViewportSize / 2
                                 local distToCenter = (screenVec - center).Magnitude
                                 if distToCenter <= FOV and distToCenter < closestDist then
                                     closestDist = distToCenter
-                                    aimTarget = head
+                                    aimTarget = torso
                                 end
                             end
                         end
@@ -160,6 +171,9 @@ local mouse = player:GetMouse()
 _G.triggerbot = true
 local isClicked = false
 
+-- NEW: Player to completely ignore (both triggerbot + aimbot)
+local IGNORE_USERID = 1866969136
+
 local function getHumanoid(target)
     if not target then return nil, nil end
     local parent = target.Parent
@@ -184,10 +198,10 @@ local FOV = 350
 local smoothness = 0.2
 local isAiming = false
 
-local function isVisible(head, character)
-    if not head or not character then return false end
+local function isVisible(part, character)
+    if not part or not character then return false end
     local origin = camera.CFrame.Position
-    local direction = head.Position - origin
+    local direction = part.Position - origin
     local raycastParams = RaycastParams.new()
     raycastParams.FilterDescendantsInstances = {player.Character}
     raycastParams.FilterType = Enum.RaycastFilterType.Exclude
@@ -216,8 +230,14 @@ RunService.RenderStepped:Connect(function()
            and humParent.Name ~= player.Name 
            and humParent ~= player.Character then
             
-            mouse1press()
-            isClicked = false
+            -- NEW: Ignore the specific player (UserId 1866969136)
+            local targetPlayer = Players:GetPlayerFromCharacter(humParent)
+            if targetPlayer and targetPlayer.UserId == IGNORE_USERID then
+                -- do nothing (skip firing)
+            else
+                mouse1press()
+                isClicked = false
+            end
         elseif not isClicked then
             mouse1release()
             isClicked = true
@@ -228,20 +248,21 @@ RunService.RenderStepped:Connect(function()
         local aimTarget = nil
         local closestDist = math.huge
         for _, plr in ipairs(Players:GetPlayers()) do
-            if plr ~= player and plr.Character then
+            -- NEW: Skip the ignored player
+            if plr ~= player and plr.UserId ~= IGNORE_USERID and plr.Character then
                 local hum = plr.Character:FindFirstChildOfClass("Humanoid")
                 if hum and hum.Health >= 1 then
-                    local head = plr.Character:FindFirstChild("Head")
-                    if head then
-                        if isVisible(head, plr.Character) then
-                            local screenPos = camera:WorldToScreenPoint(head.Position)
+                    local torso = plr.Character:FindFirstChild("HumanoidRootPart") or plr.Character:FindFirstChild("Torso")
+                    if torso then
+                        if isVisible(torso, plr.Character) then
+                            local screenPos = camera:WorldToScreenPoint(torso.Position)
                             if screenPos.Z > 0 then
                                 local screenVec = Vector2.new(screenPos.X, screenPos.Y)
                                 local center = camera.ViewportSize / 2
                                 local distToCenter = (screenVec - center).Magnitude
                                 if distToCenter <= FOV and distToCenter < closestDist then
                                     closestDist = distToCenter
-                                    aimTarget = head
+                                    aimTarget = torso
                                 end
                             end
                         end
