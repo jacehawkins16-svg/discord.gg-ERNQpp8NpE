@@ -39,6 +39,7 @@ end
 local camera = workspace.CurrentCamera
 local FOV = 350
 local smoothness = 0.1   -- CHANGED: Lowered from 0.2 → much smoother/less snappy aim (feels more human)
+local prediction = 0.15  -- NEW: Prediction multiplier (tune 0.05-0.25). This leads the target based on velocity for near-100% hitrate on moving enemies
 local isAiming = false
 
 local function isVisible(part, character)
@@ -94,7 +95,7 @@ RunService.RenderStepped:Connect(function()
         end
     end
     
-    -- === AIMBOT (now smoother) ===
+    -- === AIMBOT (now smoother + prediction) ===
     if isAiming then
         local aimTarget = nil
         local closestDist = math.huge
@@ -121,7 +122,9 @@ RunService.RenderStepped:Connect(function()
             end
         end
         if aimTarget then
-            local targetCFrame = CFrame.new(camera.CFrame.Position, aimTarget.Position)
+            -- NEW PREDICTION: Lead the target so crosshair is where they will be
+            local predictedPosition = aimTarget.Position + (aimTarget.Velocity * prediction)
+            local targetCFrame = CFrame.new(camera.CFrame.Position, predictedPosition)
             camera.CFrame = camera.CFrame:Lerp(targetCFrame, smoothness)
         end
     end
@@ -196,6 +199,7 @@ end
 local camera = workspace.CurrentCamera
 local FOV = 350
 local smoothness = 0.1   -- CHANGED: Lowered from 0.2 → much smoother/less snappy aim (feels more human)
+local prediction = 0.15  -- NEW: Prediction multiplier (tune 0.05-0.25). This leads the target based on velocity for near-100% hitrate on moving enemies
 local isAiming = false
 
 local function isVisible(part, character)
@@ -251,7 +255,7 @@ RunService.RenderStepped:Connect(function()
         end
     end
     
-    -- === AIMBOT (now smoother) ===
+    -- === AIMBOT (now smoother + prediction) ===
     if isAiming then
         local aimTarget = nil
         local closestDist = math.huge
@@ -278,7 +282,9 @@ RunService.RenderStepped:Connect(function()
             end
         end
         if aimTarget then
-            local targetCFrame = CFrame.new(camera.CFrame.Position, aimTarget.Position)
+            -- NEW PREDICTION: Lead the target so crosshair is where they will be
+            local predictedPosition = aimTarget.Position + (aimTarget.Velocity * prediction)
+            local targetCFrame = CFrame.new(camera.CFrame.Position, predictedPosition)
             camera.CFrame = camera.CFrame:Lerp(targetCFrame, smoothness)
         end
     end
