@@ -1,40 +1,28 @@
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
-local Window = Library.CreateLib("Vanta Universal [Beta] | discord.gg-ERNQpp8NpE", "DarkTheme")
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
+local Window = Rayfield:CreateWindow({
+	Name = "Vanta Universal [Beta] | discord.gg-ERNQpp8NpE",
+	LoadingTitle = "Vanta Universal [Beta]",
+	LoadingSubtitle = "discord.gg-ERNQpp8NpE",
+	ConfigurationSaving = {
+		Enabled = false,
+		FolderName = nil,
+		FileName = "VantaUniversal"
+	},
+	Discord = {
+		Enabled = false,
+		Invite = "ERNQpp8NpE",
+		RememberJoins = true
+	},
+	KeySystem = false
+})
 
-local CombatTab    = Window:NewTab("Combat")
-local VisualsTab   = Window:NewTab("Visuals [BETA]")
-local MovementTab  = Window:NewTab("Movement")
-local AFKTab       = Window:NewTab("Auto [BETA]")
-local TeleportsTab = Window:NewTab("Teleports")
-local CameraTab    = Window:NewTab("Camera")
-
-local TriggerSection = CombatTab:NewSection("Triggerbot")
-local AimbotSection  = CombatTab:NewSection("Aimbot")
-local MiscSection    = CombatTab:NewSection("Misc")
-
-local FOVSection       = VisualsTab:NewSection("Aimbot FOV Circle")
-local BoxSection       = VisualsTab:NewSection("2D Boxes")
-local TracerSection    = VisualsTab:NewSection("Tracers")
-local NameSection      = VisualsTab:NewSection("Player Names")
-local HealthSection    = VisualsTab:NewSection("Health Display")
-local ChamsSection     = VisualsTab:NewSection("Chams / Wall Glow")
-local CursorSection    = VisualsTab:NewSection("Custom Cursor Crosshair")
-
-local SpeedSection            = MovementTab:NewSection("Speed Hack")
-local NoclipSection           = MovementTab:NewSection("Noclip")
-local FlySection              = MovementTab:NewSection("Fly")
-local JumpSection             = MovementTab:NewSection("Jump Hacks")
-local AdvancedMovementSection = MovementTab:NewSection("Advanced Movement")
-
-local AutoWinSection   = AFKTab:NewSection("Auto Win / Kill")
-local AntiAFKSection   = AFKTab:NewSection("Anti-AFK / Anti-Kick")
-local FutureAFKSection = AFKTab:NewSection("More AFK Features (Coming Soon)")
-
-local PlayerTPSection = TeleportsTab:NewSection("Player Teleports")
-local ClickTPSection  = TeleportsTab:NewSection("Click Teleport")
-
-local CameraFOVSection = CameraTab:NewSection("FOV Changer")
+Rayfield:Notify({
+	Title = "Vanta Universal",
+	Content = "UI loaded successfully!\nPress G to toggle the menu (custom keybind).",
+	Duration = 6,
+	Image = 4483362458
+})
 
 -- Services
 local Players           = game:GetService("Players")
@@ -66,7 +54,7 @@ local function queueReinject()
 end
 -- ==================== END AUTO REINJECT ====================
 
--- Settings Table (unchanged)
+-- Settings Table
 local Settings = {
     Triggerbot = { Enabled = false },
     Aimbot = {
@@ -133,7 +121,7 @@ local lastClickTime     = 0
 local currentTarget     = nil
 local targetSwitchTime  = 0
 local autoWinRunning    = false
-local wasOnValidTarget  = false   -- NEW for state-based triggerbot
+local wasOnValidTarget  = false
 
 -- Noclip (NEW FIXED VERSION)
 local noclipConn = nil
@@ -180,7 +168,7 @@ fov.Visible      = false
 
 local espCache = {}
 
--- Cursor Presets (unchanged)
+-- Cursor Presets
 local CursorPresets = {
     ["Default"]      = "",
     ["Simple +"]     = "rbxassetid://1827745864",
@@ -241,7 +229,7 @@ local function findClosest()
     return best
 end
 
--- ESP SETUP (unchanged)
+-- ESP SETUP
 local function setupESPForPlayer(player)
     if player == lp then return end
 
@@ -304,7 +292,7 @@ for _, player in ipairs(Players:GetPlayers()) do
 end
 Players.PlayerAdded:Connect(setupESPForPlayer)
 
--- Infinite Jump (unchanged)
+-- Infinite Jump
 UserInputService.JumpRequest:Connect(function()
     if Settings.Movement.InfJump and lp.Character then
         local hum = lp.Character:FindFirstChildOfClass("Humanoid")
@@ -314,7 +302,7 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
--- Click Teleport (unchanged)
+-- Click Teleport
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if Settings.ClickTeleport.Enabled and input.UserInputType == Enum.UserInputType.MouseButton2 then
@@ -333,7 +321,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
--- Helper: find and equip first tool (unchanged)
+-- Helper: find and equip first tool
 local function equipFirstTool()
     if not lp.Character then return end
     local backpack = lp:FindFirstChild("Backpack")
@@ -358,7 +346,7 @@ local function unequipCurrentTool()
     end
 end
 
--- AUTO WIN (unchanged)
+-- AUTO WIN
 local function startAutoWinLoop()
     if autoWinRunning then return end
     autoWinRunning = true
@@ -439,11 +427,7 @@ local function stopAutoWinLoop()
     end
 end
 
--- ==================== FIXED NOCLIP (dynamic, non-buggy) ====================
--- (functions defined above)
--- ==================== END FIXED NOCLIP ====================
-
--- Invisible exploit from invis v2.lua
+-- Invisible exploit
 local seatTeleportPosition = Vector3.new(-25.95, 400, 3537.55)
 local voidLevelYThreshold = -50
 local invis_transparency = 0.75
@@ -515,7 +499,7 @@ end)
 
 -- ESP RENDER + ALL OTHER LOGIC
 RunService.RenderStepped:Connect(function()
-    -- NEW STATE-BASED TRIGGERBOT (holds while on target, only calls press/release on state change to avoid input conflicts)
+    -- NEW STATE-BASED TRIGGERBOT
     local isOnValidTarget = false
     if mouse.Target and lp.Character and not mouse.Target:IsDescendantOf(lp.Character) then
         local par = mouse.Target.Parent
@@ -569,8 +553,6 @@ RunService.RenderStepped:Connect(function()
         local root = lp.Character:FindFirstChild("HumanoidRootPart")
 
         if hum and root then
-            -- FIXED: Only set WalkSpeed when the Speed Hack toggle is ENABLED.
-            -- When disabled, we do NOTHING so the game can control its own WalkSpeed (fixes games where game sets 0 or custom value).
             if Settings.Movement.Enabled then
                 hum.WalkSpeed = Settings.Movement.Value
             end
@@ -609,8 +591,6 @@ RunService.RenderStepped:Connect(function()
                 end
             end
 
-            -- FIXED: Only set JumpPower when the Custom Jump Power toggle is ENABLED.
-            -- When disabled, we do NOTHING so the game can control its own JumpPower (prevents detection in games with non-50 default JumpPower).
             if Settings.Movement.CustomJumpPower then
                 hum.JumpPower = Settings.Movement.JumpPower
             end
@@ -623,7 +603,7 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- ESP RENDER LOOP (unchanged)
+    -- ESP RENDER LOOP
     for _, player in Players:GetPlayers() do
         if player == lp then continue end
 
@@ -713,7 +693,7 @@ RunService.RenderStepped:Connect(function()
         d.chams.Enabled = Settings.ESP.Chams.Enabled
     end
 
-    -- Enforce Custom Cursor every frame (fixes presets not applying / being reset by game)
+    -- Enforce Custom Cursor every frame
     if Settings.CursorCrosshair.Enabled then
         local id = Settings.CursorCrosshair.CustomID ~= "" and Settings.CursorCrosshair.CustomID or (CursorPresets[Settings.CursorCrosshair.Preset] or "")
         if id ~= "" then
@@ -726,7 +706,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Cleanup (unchanged)
+-- Cleanup
 Players.PlayerRemoving:Connect(function(p)
     if espCache[p] then
         for _,l in espCache[p].box or {} do 
@@ -740,308 +720,587 @@ Players.PlayerRemoving:Connect(function(p)
     end
 end)
 
--- ==================== UI CONTROLS ====================
+-- ==================== RAYFIELD UI CONTROLS (Exact same tabs/sections/order) ====================
 
 -- Combat Tab
-TriggerSection:NewToggle("Triggerbot", "Shoot when crosshair on valid target", function(v)
-    Settings.Triggerbot.Enabled = v
-    if not v and wasOnValidTarget then
-        mouse1release()
-        wasOnValidTarget = false
-    end
-end)
+local CombatTab = Window:CreateTab("Combat", 4483362458)
+CombatTab:CreateSection("Triggerbot")
+CombatTab:CreateToggle({
+	Name = "Triggerbot",
+	CurrentValue = Settings.Triggerbot.Enabled,
+	Flag = "Triggerbot",
+	Callback = function(Value)
+		Settings.Triggerbot.Enabled = Value
+		if not Value and wasOnValidTarget then
+			mouse1release()
+			wasOnValidTarget = false
+		end
+	end,
+})
 
-AimbotSection:NewToggle("Aimbot", "Lock onto closest in FOV", function(v)
-    Settings.Aimbot.Enabled = v
-end)
+CombatTab:CreateSection("Aimbot")
+CombatTab:CreateToggle({
+	Name = "Aimbot",
+	CurrentValue = Settings.Aimbot.Enabled,
+	Flag = "Aimbot",
+	Callback = function(Value)
+		Settings.Aimbot.Enabled = Value
+	end,
+})
+CombatTab:CreateSlider({
+	Name = "FOV",
+	Range = {80, 1400},
+	Increment = 1,
+	CurrentValue = Settings.Aimbot.FOV,
+	Flag = "AimbotFOV",
+	Callback = function(Value)
+		Settings.Aimbot.FOV = Value
+	end,
+})
+CombatTab:CreateDropdown({
+	Name = "Aim Part",
+	Options = {"Head","UpperTorso","HumanoidRootPart","LowerTorso"},
+	CurrentOption = {Settings.Aimbot.AimPart},
+	Flag = "AimPart",
+	Callback = function(Option)
+		Settings.Aimbot.AimPart = Option[1]
+	end,
+})
+CombatTab:CreateToggle({
+	Name = "Visible Check",
+	CurrentValue = Settings.Aimbot.VisibleCheck,
+	Flag = "VisibleCheck",
+	Callback = function(Value)
+		Settings.Aimbot.VisibleCheck = Value
+	end,
+})
+CombatTab:CreateSlider({
+	Name = "Smoothness",
+	Range = {0, 100},
+	Increment = 1,
+	CurrentValue = Settings.Aimbot.Smooth * 100,
+	Flag = "Smoothness",
+	Callback = function(Value)
+		Settings.Aimbot.Smooth = Value / 100
+	end,
+})
 
-AimbotSection:NewSlider("FOV", "", 1400, 80, function(v)
-    Settings.Aimbot.FOV = v
-end)
-
-AimbotSection:NewDropdown("Aim Part", "", {"Head","UpperTorso","HumanoidRootPart","LowerTorso"}, function(v)
-    Settings.Aimbot.AimPart = v
-end)
-
-AimbotSection:NewToggle("Visible Check", "Only aim at players not behind walls", function(v)
-    Settings.Aimbot.VisibleCheck = v
-end)
-
-AimbotSection:NewSlider("Smoothness", "100 = instant snap", 100, 0, function(v)
-    Settings.Aimbot.Smooth = v / 100
-end)
-
-MiscSection:NewToggle("Invisible", "Makes you partially invisible using seat glitch", function(v)
-    Settings.Invisible.Enabled = v
-    isInvisibleEnabled = v
-    local char = lp.Character
-    if v then
-        if char then
-            makeInvisible(char)
-        end
-    else
-        if char then
-            disableInvisible(char)
-        end
-    end
-end)
+CombatTab:CreateSection("Misc")
+CombatTab:CreateToggle({
+	Name = "Invisible",
+	CurrentValue = Settings.Invisible.Enabled,
+	Flag = "Invisible",
+	Callback = function(Value)
+		Settings.Invisible.Enabled = Value
+		isInvisibleEnabled = Value
+		local char = lp.Character
+		if Value then
+			if char then makeInvisible(char) end
+		else
+			if char then disableInvisible(char) end
+		end
+	end,
+})
 
 -- AFK Tab
-AutoWinSection:NewToggle("Auto Win / Kill", "Loop TP under enemy feet + lay down facing up (180° turn) + auto click + auto-equip (OFF = REJOIN + REINJECT)", function(v)
-    Settings.AFK.AutoWinEnabled = v
-    
-    if v then
-        equipFirstTool()
-        startAutoWinLoop()
-    else
-        stopAutoWinLoop()
-        unequipCurrentTool()
-        if lp.Character then
-            lp.Character:BreakJoints()
-        end
-        
-        queueReinject()
-        task.wait(0.6)
-        TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, lp)
-    end
-end)
+local AFKTab = Window:CreateTab("Auto [BETA]", 6026568197)
+AFKTab:CreateSection("Auto Win / Kill")
+AFKTab:CreateToggle({
+	Name = "Auto Win / Kill",
+	CurrentValue = Settings.AFK.AutoWinEnabled,
+	Flag = "AutoWin",
+	Callback = function(Value)
+		Settings.AFK.AutoWinEnabled = Value
+		
+		if Value then
+			equipFirstTool()
+			startAutoWinLoop()
+		else
+			stopAutoWinLoop()
+			unequipCurrentTool()
+			if lp.Character then
+				lp.Character:BreakJoints()
+			end
+			
+			queueReinject()
+			task.wait(0.6)
+			TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, lp)
+		end
+	end,
+})
+AFKTab:CreateLabel("Loop TP under enemy feet + lay down facing up (180° turn) + auto click + auto-equip (OFF = REJOIN + REINJECT)")
 
-AntiAFKSection:NewToggle("Anti-AFK / Anti-Kick", "Prevents idle kicks (jump + spin every ~25s)", function(v)
-    Settings.AntiAFK.Enabled = v
-    if v and not isAntiAFKActive then
-        isAntiAFKActive = true
-        task.spawn(function()
-            while isAntiAFKActive and Settings.AntiAFK.Enabled do
-                task.wait(20 + math.random(5, 15))
-                if lp.Character then
-                    local hum = lp.Character:FindFirstChildOfClass("Humanoid")
-                    if hum then hum.Jump = true end
-                    
-                    local root = lp.Character:FindFirstChild("HumanoidRootPart")
-                    if root then
-                        root.CFrame = root.CFrame * CFrame.Angles(0, math.rad(12), 0)
-                    end
-                end
-            end
-            isAntiAFKActive = false
-        end)
-    elseif not v then
-        isAntiAFKActive = false
-    end
-end)
+AFKTab:CreateSection("Anti-AFK / Anti-Kick")
+AFKTab:CreateToggle({
+	Name = "Anti-AFK / Anti-Kick",
+	CurrentValue = Settings.AntiAFK.Enabled,
+	Flag = "AntiAFK",
+	Callback = function(Value)
+		Settings.AntiAFK.Enabled = Value
+		if Value and not isAntiAFKActive then
+			isAntiAFKActive = true
+			task.spawn(function()
+				while isAntiAFKActive and Settings.AntiAFK.Enabled do
+					task.wait(20 + math.random(5, 15))
+					if lp.Character then
+						local hum = lp.Character:FindFirstChildOfClass("Humanoid")
+						if hum then hum.Jump = true end
+						
+						local root = lp.Character:FindFirstChild("HumanoidRootPart")
+						if root then
+							root.CFrame = root.CFrame * CFrame.Angles(0, math.rad(12), 0)
+						end
+					end
+				end
+				isAntiAFKActive = false
+			end)
+		elseif not Value then
+			isAntiAFKActive = false
+		end
+	end,
+})
 
-FutureAFKSection:NewLabel("More AFK features coming soon...")
-FutureAFKSection:NewLabel("• Auto collect coins / orbs")
-FutureAFKSection:NewLabel("• Auto farm in simulators")
-FutureAFKSection:NewLabel("• Better anti-kick methods")
+AFKTab:CreateSection("More AFK Features (Coming Soon)")
+AFKTab:CreateLabel("More AFK features coming soon...")
+AFKTab:CreateLabel("• Auto collect coins / orbs")
+AFKTab:CreateLabel("• Auto farm in simulators")
+AFKTab:CreateLabel("• Better anti-kick methods")
 
 -- Visuals Tab
-FOVSection:NewToggle("Show FOV Circle", "", function(v)
-    Settings.Aimbot.ShowCircle = v
-end)
+local VisualsTab = Window:CreateTab("Visuals [BETA]", 6031094678)
+VisualsTab:CreateSection("Aimbot FOV Circle")
+VisualsTab:CreateToggle({
+	Name = "Show FOV Circle",
+	CurrentValue = Settings.Aimbot.ShowCircle,
+	Flag = "ShowFOVCircle",
+	Callback = function(Value)
+		Settings.Aimbot.ShowCircle = Value
+	end,
+})
+VisualsTab:CreateColorPicker({
+	Name = "Circle Color",
+	Color = Settings.Aimbot.CircleColor,
+	Flag = "CircleColor",
+	Callback = function(Value)
+		Settings.Aimbot.CircleColor = Value
+	end,
+})
+VisualsTab:CreateSlider({
+	Name = "Thickness",
+	Range = {1, 6},
+	Increment = 1,
+	CurrentValue = Settings.Aimbot.CircleThick,
+	Flag = "CircleThick",
+	Callback = function(Value)
+		Settings.Aimbot.CircleThick = Value
+	end,
+})
+VisualsTab:CreateSlider({
+	Name = "Transparency",
+	Range = {0, 10},
+	Increment = 1,
+	CurrentValue = Settings.Aimbot.CircleTrans * 10,
+	Flag = "CircleTrans",
+	Callback = function(Value)
+		Settings.Aimbot.CircleTrans = Value / 10
+	end,
+})
 
-FOVSection:NewColorPicker("Circle Color", "", Settings.Aimbot.CircleColor, function(c)
-    Settings.Aimbot.CircleColor = c
-end)
+VisualsTab:CreateSection("2D Boxes")
+VisualsTab:CreateToggle({
+	Name = "Boxes",
+	CurrentValue = Settings.ESP.Boxes.Enabled,
+	Flag = "Boxes",
+	Callback = function(Value)
+		Settings.ESP.Boxes.Enabled = Value
+	end,
+})
+VisualsTab:CreateColorPicker({
+	Name = "Color",
+	Color = Settings.ESP.Boxes.Color,
+	Flag = "BoxesColor",
+	Callback = function(Value)
+		Settings.ESP.Boxes.Color = Value
+	end,
+})
+VisualsTab:CreateSlider({
+	Name = "Thickness",
+	Range = {1, 5},
+	Increment = 1,
+	CurrentValue = Settings.ESP.Boxes.Thickness,
+	Flag = "BoxesThickness",
+	Callback = function(Value)
+		Settings.ESP.Boxes.Thickness = Value
+	end,
+})
 
-FOVSection:NewSlider("Thickness", "", 6, 1, function(v)
-    Settings.Aimbot.CircleThick = v
-end)
+VisualsTab:CreateSection("Tracers")
+VisualsTab:CreateToggle({
+	Name = "Tracers",
+	CurrentValue = Settings.ESP.Tracers.Enabled,
+	Flag = "Tracers",
+	Callback = function(Value)
+		Settings.ESP.Tracers.Enabled = Value
+	end,
+})
+VisualsTab:CreateColorPicker({
+	Name = "Color",
+	Color = Settings.ESP.Tracers.Color,
+	Flag = "TracersColor",
+	Callback = function(Value)
+		Settings.ESP.Tracers.Color = Value
+	end,
+})
+VisualsTab:CreateSlider({
+	Name = "Thickness",
+	Range = {1, 5},
+	Increment = 1,
+	CurrentValue = Settings.ESP.Tracers.Thickness,
+	Flag = "TracersThickness",
+	Callback = function(Value)
+		Settings.ESP.Tracers.Thickness = Value
+	end,
+})
 
-FOVSection:NewSlider("Transparency", "0 = solid", 10, 0, function(v)
-    Settings.Aimbot.CircleTrans = v/10
-end)
+VisualsTab:CreateSection("Player Names")
+VisualsTab:CreateToggle({
+	Name = "Names",
+	CurrentValue = Settings.ESP.Names.Enabled,
+	Flag = "Names",
+	Callback = function(Value)
+		Settings.ESP.Names.Enabled = Value
+	end,
+})
+VisualsTab:CreateColorPicker({
+	Name = "Color",
+	Color = Settings.ESP.Names.Color,
+	Flag = "NamesColor",
+	Callback = function(Value)
+		Settings.ESP.Names.Color = Value
+	end,
+})
+VisualsTab:CreateSlider({
+	Name = "Text Size",
+	Range = {10, 22},
+	Increment = 1,
+	CurrentValue = Settings.ESP.Names.Size,
+	Flag = "NamesSize",
+	Callback = function(Value)
+		Settings.ESP.Names.Size = Value
+	end,
+})
 
-BoxSection:NewToggle("Boxes", "Draw 2D boxes", function(v)
-    Settings.ESP.Boxes.Enabled = v
-end)
+VisualsTab:CreateSection("Health Display")
+VisualsTab:CreateToggle({
+	Name = "Health Display",
+	CurrentValue = Settings.ESP.Health.Enabled,
+	Flag = "HealthDisplay",
+	Callback = function(Value)
+		Settings.ESP.Health.Enabled = Value
+	end,
+})
+VisualsTab:CreateColorPicker({
+	Name = "Color",
+	Color = Settings.ESP.Health.Color,
+	Flag = "HealthColor",
+	Callback = function(Value)
+		Settings.ESP.Health.Color = Value
+	end,
+})
+VisualsTab:CreateSlider({
+	Name = "Text Size",
+	Range = {8, 16},
+	Increment = 1,
+	CurrentValue = Settings.ESP.Health.Size,
+	Flag = "HealthSize",
+	Callback = function(Value)
+		Settings.ESP.Health.Size = Value
+	end,
+})
 
-BoxSection:NewColorPicker("Color", "", Settings.ESP.Boxes.Color, function(c)
-    Settings.ESP.Boxes.Color = c
-end)
+VisualsTab:CreateSection("Chams / Wall Glow")
+VisualsTab:CreateToggle({
+	Name = "Chams",
+	CurrentValue = Settings.ESP.Chams.Enabled,
+	Flag = "Chams",
+	Callback = function(Value)
+		Settings.ESP.Chams.Enabled = Value
+	end,
+})
+VisualsTab:CreateColorPicker({
+	Name = "Outline",
+	Color = Settings.ESP.Chams.Outline,
+	Flag = "ChamsOutline",
+	Callback = function(Value)
+		Settings.ESP.Chams.Outline = Value
+	end,
+})
+VisualsTab:CreateColorPicker({
+	Name = "Fill",
+	Color = Settings.ESP.Chams.Fill,
+	Flag = "ChamsFill",
+	Callback = function(Value)
+		Settings.ESP.Chams.Fill = Value
+	end,
+})
+VisualsTab:CreateSlider({
+	Name = "Fill Transparency",
+	Range = {0, 10},
+	Increment = 1,
+	CurrentValue = Settings.ESP.Chams.FillTrans * 10,
+	Flag = "FillTrans",
+	Callback = function(Value)
+		Settings.ESP.Chams.FillTrans = Value / 10
+	end,
+})
 
-BoxSection:NewSlider("Thickness", "", 5, 1, function(v)
-    Settings.ESP.Boxes.Thickness = v
-end)
-
-TracerSection:NewToggle("Tracers", "Lines from bottom of screen", function(v)
-    Settings.ESP.Tracers.Enabled = v
-end)
-
-TracerSection:NewColorPicker("Color", "", Settings.ESP.Tracers.Color, function(c)
-    Settings.ESP.Tracers.Color = c
-end)
-
-TracerSection:NewSlider("Thickness", "", 5, 1, function(v)
-    Settings.ESP.Tracers.Thickness = v
-end)
-
-NameSection:NewToggle("Names", "Show player names", function(v)
-    Settings.ESP.Names.Enabled = v
-end)
-
-NameSection:NewColorPicker("Color", "", Settings.ESP.Names.Color, function(c)
-    Settings.ESP.Names.Color = c
-end)
-
-NameSection:NewSlider("Text Size", "", 22, 10, function(v)
-    Settings.ESP.Names.Size = v
-end)
-
-HealthSection:NewToggle("Health Display", 'Shows "Health: X" above name', function(v)
-    Settings.ESP.Health.Enabled = v
-end)
-
-HealthSection:NewColorPicker("Color", "", Settings.ESP.Health.Color, function(c)
-    Settings.ESP.Health.Color = c
-end)
-
-HealthSection:NewSlider("Text Size", "", 16, 8, function(v)
-    Settings.ESP.Health.Size = v
-end)
-
-ChamsSection:NewToggle("Chams", "Visible through walls", function(v)
-    Settings.ESP.Chams.Enabled = v
-end)
-
-ChamsSection:NewColorPicker("Outline", "", Settings.ESP.Chams.Outline, function(c)
-    Settings.ESP.Chams.Outline = c
-end)
-
-ChamsSection:NewColorPicker("Fill", "", Settings.ESP.Chams.Fill, function(c)
-    Settings.ESP.Chams.Fill = c
-end)
-
-ChamsSection:NewSlider("Fill Transparency", "0-1", 10, 0, function(v)
-    Settings.ESP.Chams.FillTrans = v/10
-end)
-
-CursorSection:NewToggle("Custom Cursor Crosshair", "Replaces your mouse cursor with a Roblox catalog crosshair", function(v)
-    Settings.CursorCrosshair.Enabled = v
-end)
-
-CursorSection:NewDropdown("Preset Crosshair", "Choose from popular Roblox catalog ones", {"Default","Simple +","Medium Cross","Small Dot","Glow Circle","Green Dot","Hello Kitty","Meme Funny","Classic CB"}, function(v)
-    Settings.CursorCrosshair.Preset = v
-    Settings.CursorCrosshair.CustomID = ""
-end)
-
-CursorSection:NewTextBox("Custom Asset ID", "Paste rbxassetid://123456789 for your own crosshair", function(val)
-    Settings.CursorCrosshair.CustomID = val
-    if val ~= "" then
-        Settings.CursorCrosshair.Preset = "Custom"
-    end
-end)
-
-CursorSection:NewLabel("Tip: Use IDs from Roblox catalog (decals/images)")
-CursorSection:NewLabel("Popular ones: 1827745864 (classic +), 4048495272, 10891594364 (glow)")
-CursorSection:NewLabel("Hello Kitty style: 11351620355")
+VisualsTab:CreateSection("Custom Cursor Crosshair")
+VisualsTab:CreateToggle({
+	Name = "Custom Cursor Crosshair",
+	CurrentValue = Settings.CursorCrosshair.Enabled,
+	Flag = "CursorCrosshair",
+	Callback = function(Value)
+		Settings.CursorCrosshair.Enabled = Value
+	end,
+})
+VisualsTab:CreateDropdown({
+	Name = "Preset Crosshair",
+	Options = {"Default","Simple +","Medium Cross","Small Dot","Glow Circle","Green Dot","Hello Kitty","Meme Funny","Classic CB"},
+	CurrentOption = {Settings.CursorCrosshair.Preset},
+	Flag = "CursorPreset",
+	Callback = function(Option)
+		Settings.CursorCrosshair.Preset = Option[1]
+		Settings.CursorCrosshair.CustomID = ""
+	end,
+})
+VisualsTab:CreateInput({
+	Name = "Custom Asset ID",
+	PlaceholderText = "Paste rbxassetid://123456789 for your own crosshair",
+	CurrentValue = Settings.CursorCrosshair.CustomID,
+	RemoveTextAfterFocusLost = false,
+	Flag = "CustomAssetID",
+	Callback = function(Text)
+		Settings.CursorCrosshair.CustomID = Text
+		if Text ~= "" then
+			Settings.CursorCrosshair.Preset = "Custom"
+		end
+	end,
+})
+VisualsTab:CreateLabel("Tip: Use IDs from Roblox catalog (decals/images)")
+VisualsTab:CreateLabel("Popular ones: 1827745864 (classic +), 4048495272, 10891594364 (glow)")
+VisualsTab:CreateLabel("Hello Kitty style: 11351620355")
 
 -- Movement Tab
-SpeedSection:NewToggle("Speed Hack", "Change WalkSpeed", function(v)
-    Settings.Movement.Enabled = v
-end)
+local MovementTab = Window:CreateTab("Movement", 6031075938)
+MovementTab:CreateSection("Speed Hack")
+MovementTab:CreateToggle({
+	Name = "Speed Hack",
+	CurrentValue = Settings.Movement.Enabled,
+	Flag = "SpeedHack",
+	Callback = function(Value)
+		Settings.Movement.Enabled = Value
+	end,
+})
+MovementTab:CreateSlider({
+	Name = "Speed",
+	Range = {16, 180},
+	Increment = 1,
+	CurrentValue = Settings.Movement.Value,
+	Flag = "SpeedValue",
+	Callback = function(Value)
+		Settings.Movement.Value = Value
+	end,
+})
 
-SpeedSection:NewSlider("Speed", "16 = default", 180, 16, function(v)
-    Settings.Movement.Value = v
-end)
+MovementTab:CreateSection("Noclip")
+MovementTab:CreateToggle({
+	Name = "Noclip",
+	CurrentValue = Settings.Movement.Noclip,
+	Flag = "Noclip",
+	Callback = function(Value)
+		Settings.Movement.Noclip = Value
+		if Value then
+			startNoclip()
+		else
+			stopNoclip()
+		end
+	end,
+})
 
-NoclipSection:NewToggle("Noclip", "Walk through walls", function(v)
-    Settings.Movement.Noclip = v
-    if v then
-        startNoclip()
-    else
-        stopNoclip()
-    end
-end)
+MovementTab:CreateSection("Fly")
+MovementTab:CreateToggle({
+	Name = "Fly",
+	CurrentValue = Settings.Movement.Fly,
+	Flag = "Fly",
+	Callback = function(Value)
+		Settings.Movement.Fly = Value
+	end,
+})
+MovementTab:CreateSlider({
+	Name = "Fly Speed",
+	Range = {20, 300},
+	Increment = 1,
+	CurrentValue = Settings.Movement.FlySpeed,
+	Flag = "FlySpeed",
+	Callback = function(Value)
+		Settings.Movement.FlySpeed = Value
+	end,
+})
 
-FlySection:NewToggle("Fly", "Free camera flight (WASD + Space/Ctrl)", function(v)
-    Settings.Movement.Fly = v
-end)
+MovementTab:CreateSection("Jump Hacks")
+MovementTab:CreateToggle({
+	Name = "Infinite Jump",
+	CurrentValue = Settings.Movement.InfJump,
+	Flag = "InfJump",
+	Callback = function(Value)
+		Settings.Movement.InfJump = Value
+	end,
+})
+MovementTab:CreateToggle({
+	Name = "Bunny Hop",
+	CurrentValue = Settings.Movement.Bhop,
+	Flag = "Bhop",
+	Callback = function(Value)
+		Settings.Movement.Bhop = Value
+	end,
+})
+MovementTab:CreateToggle({
+	Name = "Custom Jump Power",
+	CurrentValue = Settings.Movement.CustomJumpPower,
+	Flag = "CustomJumpPower",
+	Callback = function(Value)
+		Settings.Movement.CustomJumpPower = Value
+	end,
+})
+MovementTab:CreateSlider({
+	Name = "Jump Power",
+	Range = {20, 400},
+	Increment = 1,
+	CurrentValue = Settings.Movement.JumpPower,
+	Flag = "JumpPower",
+	Callback = function(Value)
+		Settings.Movement.JumpPower = Value
+	end,
+})
 
-FlySection:NewSlider("Fly Speed", "", 300, 20, function(v)
-    Settings.Movement.FlySpeed = v
-end)
+MovementTab:CreateSection("Advanced Movement")
+MovementTab:CreateToggle({
+	Name = "CFrame Speed",
+	CurrentValue = Settings.Movement.CFrameSpeed,
+	Flag = "CFrameSpeed",
+	Callback = function(Value)
+		Settings.Movement.CFrameSpeed = Value
+	end,
+})
+MovementTab:CreateSlider({
+	Name = "CFrame Speed",
+	Range = {10, 120},
+	Increment = 1,
+	CurrentValue = Settings.Movement.CFrameSpeedValue,
+	Flag = "CFrameSpeedValue",
+	Callback = function(Value)
+		Settings.Movement.CFrameSpeedValue = Value
+	end,
+})
 
-JumpSection:NewToggle("Infinite Jump", "Jump mid-air", function(v)
-    Settings.Movement.InfJump = v
-end)
+-- Teleports Tab
+local TeleportsTab = Window:CreateTab("Teleports", 6022668955)
+TeleportsTab:CreateSection("Player Teleports")
+TeleportsTab:CreateInput({
+	Name = "Player Name",
+	PlaceholderText = "Exact username (case insensitive)",
+	CurrentValue = tpTargetName,
+	RemoveTextAfterFocusLost = false,
+	Flag = "PlayerName",
+	Callback = function(Text)
+		tpTargetName = Text
+	end,
+})
+TeleportsTab:CreateButton({
+	Name = "Teleport to Player",
+	Callback = function()
+		if tpTargetName == "" then return end
+		for _, p in ipairs(Players:GetPlayers()) do
+			if p.Name:lower() == tpTargetName:lower() and p ~= lp then
+				if p.Character and lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
+					local targetPart = p.Character:FindFirstChild("UpperTorso") or p.Character:FindFirstChild("Torso") or p.Character:FindFirstChild("HumanoidRootPart")
+					if targetPart then
+						lp.Character.HumanoidRootPart.CFrame = targetPart.CFrame
+					end
+				end
+				return
+			end
+		end
+	end,
+})
+TeleportsTab:CreateButton({
+	Name = "Teleport to Random Player",
+	Callback = function()
+		local candidates = {}
+		for _, p in ipairs(Players:GetPlayers()) do
+			if p ~= lp and p.Character then
+				table.insert(candidates, p)
+			end
+		end
+		if #candidates > 0 then
+			local chosen = candidates[math.random(1, #candidates)]
+			if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
+				local targetPart = chosen.Character:FindFirstChild("UpperTorso") or chosen.Character:FindFirstChild("Torso") or chosen.Character:FindFirstChild("HumanoidRootPart")
+				if targetPart then
+					lp.Character.HumanoidRootPart.CFrame = targetPart.CFrame
+				end
+			end
+		end
+	end,
+})
 
-JumpSection:NewToggle("Bunny Hop", "Automatic bunny hopping", function(v)
-    Settings.Movement.Bhop = v
-end)
-
-JumpSection:NewToggle("Custom Jump Power", "Change jump height", function(v)
-    Settings.Movement.CustomJumpPower = v
-end)
-
-JumpSection:NewSlider("Jump Power", "", 400, 20, function(v)
-    Settings.Movement.JumpPower = v
-end)
-
-AdvancedMovementSection:NewToggle("CFrame Speed", "Fast WASD movement (ignores walls)", function(v)
-    Settings.Movement.CFrameSpeed = v
-end)
-
-AdvancedMovementSection:NewSlider("CFrame Speed", "", 120, 10, function(v)
-    Settings.Movement.CFrameSpeedValue = v
-end)
-
--- Teleports Tab (unchanged)
-PlayerTPSection:NewTextBox("Player Name", "Exact username (case insensitive)", function(val)
-    tpTargetName = val
-end)
-
-PlayerTPSection:NewButton("Teleport to Player", "Teleports you DIRECTLY CENTERED into the player's torso", function()
-    if tpTargetName == "" then return end
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p.Name:lower() == tpTargetName:lower() and p ~= lp then
-            if p.Character and lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
-                local targetPart = p.Character:FindFirstChild("UpperTorso") or p.Character:FindFirstChild("Torso") or p.Character:FindFirstChild("HumanoidRootPart")
-                if targetPart then
-                    lp.Character.HumanoidRootPart.CFrame = targetPart.CFrame
-                end
-            end
-            return
-        end
-    end
-end)
-
-PlayerTPSection:NewButton("Teleport to Random Player", "Teleports you DIRECTLY CENTERED into a random player's torso", function()
-    local candidates = {}
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= lp and p.Character then
-            table.insert(candidates, p)
-        end
-    end
-    if #candidates > 0 then
-        local chosen = candidates[math.random(1, #candidates)]
-        if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
-            local targetPart = chosen.Character:FindFirstChild("UpperTorso") or chosen.Character:FindFirstChild("Torso") or chosen.Character:FindFirstChild("HumanoidRootPart")
-            if targetPart then
-                lp.Character.HumanoidRootPart.CFrame = targetPart.CFrame
-            end
-        end
-    end
-end)
-
-ClickTPSection:NewToggle("Click Teleport (Right Click)", "Right-click anywhere in the world to teleport there", function(v)
-    Settings.ClickTeleport.Enabled = v
-end)
-
-ClickTPSection:NewLabel("Tip: Works best with Noclip or Fly enabled")
-ClickTPSection:NewLabel("Right-click on ground / wall to teleport")
+TeleportsTab:CreateSection("Click Teleport")
+TeleportsTab:CreateToggle({
+	Name = "Click Teleport (Right Click)",
+	CurrentValue = Settings.ClickTeleport.Enabled,
+	Flag = "ClickTeleport",
+	Callback = function(Value)
+		Settings.ClickTeleport.Enabled = Value
+	end,
+})
+TeleportsTab:CreateLabel("Tip: Works best with Noclip or Fly enabled")
+TeleportsTab:CreateLabel("Right-click on ground / wall to teleport")
 
 -- Camera Tab
-CameraFOVSection:NewToggle("Enable FOV Changer", "Wider/narrower view", function(v)
-    Settings.FOVChanger.Enabled = v
+local CameraTab = Window:CreateTab("Camera", 6034509993)
+CameraTab:CreateSection("FOV Changer")
+CameraTab:CreateToggle({
+	Name = "Enable FOV Changer",
+	CurrentValue = Settings.FOVChanger.Enabled,
+	Flag = "FOVChanger",
+	Callback = function(Value)
+		Settings.FOVChanger.Enabled = Value
+	end,
+})
+CameraTab:CreateSlider({
+	Name = "FOV Value",
+	Range = {50, 120},
+	Increment = 1,
+	CurrentValue = Settings.FOVChanger.Value,
+	Flag = "FOVValue",
+	Callback = function(Value)
+		Settings.FOVChanger.Value = Value
+	end,
+})
+CameraTab:CreateLabel("Default Roblox FOV is usually 70")
+CameraTab:CreateLabel("Higher values = wider view")
+CameraTab:CreateLabel("Lower values = zoomed in feel")
+
+-- Custom G keybind to toggle Rayfield UI
+local rayfieldMain = nil
+task.spawn(function()
+	repeat task.wait(0.2) until game.CoreGui:FindFirstChild("Rayfield")
+	rayfieldMain = game.CoreGui.Rayfield:FindFirstChild("Main")
 end)
 
-CameraFOVSection:NewSlider("FOV Value", "50 = zoomed in, 120 = super wide", 120, 50, function(v)
-    Settings.FOVChanger.Value = v
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	if gameProcessed then return end
+	if input.KeyCode == Enum.KeyCode.G and rayfieldMain then
+		rayfieldMain.Visible = not rayfieldMain.Visible
+	end
 end)
-
-CameraFOVSection:NewLabel("Default Roblox FOV is usually 70")
-CameraFOVSection:NewLabel("Higher values = wider view")
-CameraFOVSection:NewLabel("Lower values = zoomed in feel")
-
--- End of script
