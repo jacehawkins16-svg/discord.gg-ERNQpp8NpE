@@ -35,6 +35,25 @@ local lp     = Players.LocalPlayer
 local camera = Workspace.CurrentCamera
 local mouse  = lp:GetMouse()
 
+-- ==================== AUTO REINJECT ON REJOIN (NUCLEAR FIX) ====================
+local function queueReinject()
+    local url = "https://jacehawkins16-svg.github.io/discord.gg-ERNQpp8NpE/vantas%20universal%20pvp.lua"
+    local code = 'loadstring(game:HttpGet("' .. url .. '"))()'
+    
+    pcall(function()
+        if syn and syn.queue_on_teleport then
+            syn.queue_on_teleport(code)
+        elseif queue_on_teleport then
+            queue_on_teleport(code)
+        elseif getgenv and getgenv().queue_on_teleport then
+            getgenv().queue_on_teleport(code)
+        elseif fluxus and fluxus.queue_on_teleport then
+            fluxus.queue_on_teleport(code)
+        end
+    end)
+end
+-- ==================== END AUTO REINJECT ====================
+
 -- Settings Table
 local Settings = {
     Triggerbot = { Enabled = false },
@@ -1102,12 +1121,19 @@ CameraTab:CreateToggle({
 		if Value and not betterCameraLoaded then
 			betterCameraLoaded = true
 			loadstring(game:HttpGet('https://jacehawkins16-svg.github.io/discord.gg-ERNQpp8NpE/vantas%20universal%20semirealistic%20camera.lua'))()
+			Rayfield:Notify({
+				Title = "Better Camera",
+				Content = "Loaded successfully!\n(Head-attached + first-person body hide + no names)",
+				Duration = 5,
+			})
 		elseif not Value then
+			-- Reset as much as possible before rejoin
 			camera.CameraType = Enum.CameraType.Custom
 			if lp.Character and lp.Character:FindFirstChildOfClass("Humanoid") then
 				camera.CameraSubject = lp.Character:FindFirstChildOfClass("Humanoid")
 			end
 			camera.FieldOfView = defaultFOV
+
 			if lp.Character then
 				for _, part in ipairs(lp.Character:GetDescendants()) do
 					if part:IsA("BasePart") then
@@ -1115,6 +1141,7 @@ CameraTab:CreateToggle({
 					end
 				end
 			end
+
 			for _, player in ipairs(Players:GetPlayers()) do
 				if player.Character then
 					local hum = player.Character:FindFirstChildOfClass("Humanoid")
@@ -1131,11 +1158,16 @@ CameraTab:CreateToggle({
 					end
 				end
 			end
+
 			Rayfield:Notify({
 				Title = "Better Camera",
-				Content = "Disabled (some effects may need rejoin to fully reset)",
-				Duration = 5,
+				Content = "Disabling...\nRejoining to fully unload the external camera script",
+				Duration = 6,
 			})
+
+			queueReinject()
+			task.wait(0.6)
+			TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, lp)
 		end
 	end,
 })
