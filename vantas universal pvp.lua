@@ -425,8 +425,8 @@ RunService.RenderStepped:Connect(function()
     fov.Transparency  = Settings.Aimbot.CircleTrans
     fov.Visible       = Settings.Aimbot.Enabled and Settings.Aimbot.ShowCircle
 
-    -- Aimbot
-    if Settings.Aimbot.Enabled then
+    -- Aimbot (Hold Right Click to use - PC only)
+    if Settings.Aimbot.Enabled and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
         local tgt = findClosest()
         if tgt then
             local goal = CFrame.lookAt(camera.CFrame.Position, tgt.Position)
@@ -671,6 +671,7 @@ CombatTab:CreateSlider({
 		Settings.Aimbot.Smooth = Value / 100
 	end,
 })
+CombatTab:CreateLabel("💡 Note: When Aimbot is toggled ON, you must HOLD Right Click (Mouse Button 2) to activate aiming. (PC only)")
 
 CombatTab:CreateSection("Misc")
 CombatTab:CreateToggle({
