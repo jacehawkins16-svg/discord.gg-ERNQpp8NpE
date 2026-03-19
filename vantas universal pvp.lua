@@ -35,25 +35,6 @@ local lp     = Players.LocalPlayer
 local camera = Workspace.CurrentCamera
 local mouse  = lp:GetMouse()
 
--- ==================== AUTO REINJECT ON REJOIN (NUCLEAR FIX) ====================
-local function queueReinject()
-    local url = "https://jacehawkins16-svg.github.io/discord.gg-ERNQpp8NpE/vantas%20universal%20pvp.lua"
-    local code = 'loadstring(game:HttpGet("' .. url .. '"))()'
-    
-    pcall(function()
-        if syn and syn.queue_on_teleport then
-            syn.queue_on_teleport(code)
-        elseif queue_on_teleport then
-            queue_on_teleport(code)
-        elseif getgenv and getgenv().queue_on_teleport then
-            getgenv().queue_on_teleport(code)
-        elseif fluxus and fluxus.queue_on_teleport then
-            fluxus.queue_on_teleport(code)
-        end
-    end)
-end
--- ==================== END AUTO REINJECT ====================
-
 -- Settings Table
 local Settings = {
     Triggerbot = { Enabled = false },
@@ -89,9 +70,6 @@ local Settings = {
         CustomJumpPower = false,
         JumpPower = 50
     },
-    AFK = {
-        AutoWinEnabled = false
-    },
     CursorCrosshair = {
         Enabled = false,
         Preset  = "Default",
@@ -101,13 +79,13 @@ local Settings = {
         Enabled = false,
         Value   = 70
     },
-    AntiAFK = {
-        Enabled = false
-    },
     ClickTeleport = {
         Enabled = false
     },
     Invisible = {
+        Enabled = false
+    },
+    BetterCamera = {
         Enabled = false
     }
 }
@@ -116,12 +94,8 @@ local Settings = {
 local defaultFOV = camera.FieldOfView or 70
 local defaultCursor = mouse.Icon
 local tpTargetName = ""
-local isAntiAFKActive = false
-local lastClickTime     = 0
-local currentTarget     = nil
-local targetSwitchTime  = 0
-local autoWinRunning    = false
 local wasOnValidTarget  = false
+local betterCameraLoaded = false
 
 -- Noclip (NEW FIXED VERSION)
 local noclipConn = nil
@@ -320,112 +294,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         end
     end
 end)
-
--- Helper: find and equip first tool
-local function equipFirstTool()
-    if not lp.Character then return end
-    local backpack = lp:FindFirstChild("Backpack")
-    if not backpack then return end
-
-    local alreadyEquipped = lp.Character:FindFirstChildWhichIsA("Tool")
-    if alreadyEquipped then return end
-
-    for _, item in ipairs(backpack:GetChildren()) do
-        if item:IsA("Tool") then
-            lp.Character.Humanoid:EquipTool(item)
-            return
-        end
-    end
-end
-
-local function unequipCurrentTool()
-    if not lp.Character then return end
-    local tool = lp.Character:FindFirstChildWhichIsA("Tool")
-    if tool then
-        tool.Parent = lp:FindFirstChild("Backpack")
-    end
-end
-
--- AUTO WIN
-local function startAutoWinLoop()
-    if autoWinRunning then return end
-    autoWinRunning = true
-    task.spawn(function()
-        while autoWinRunning and Settings.AFK.AutoWinEnabled do
-            if not lp.Character then 
-                task.wait(0.1)
-                continue 
-            end
-
-            local root = lp.Character:FindFirstChild("HumanoidRootPart")
-            if not root then 
-                task.wait(0.1)
-                continue 
-            end
-
-            local now = tick()
-
-            if not lp.Character:FindFirstChildWhichIsA("Tool") then
-                equipFirstTool()
-            end
-
-            if now - lastClickTime >= 0.1 then
-                mouse1press()
-                task.delay(0.015, mouse1release)
-                lastClickTime = now
-            end
-
-            if now - targetSwitchTime >= 2 then
-                local targets = {}
-                for _, p in ipairs(Players:GetPlayers()) do
-                    if p ~= lp and p.Character and isEnemy(p) then
-                        local hum = p.Character:FindFirstChildOfClass("Humanoid")
-                        if hum and hum.Health > 0 then
-                            local leg = p.Character:FindFirstChild("LeftLowerLeg") 
-                                     or p.Character:FindFirstChild("RightLowerLeg")
-                                     or p.Character:FindFirstChild("LeftFoot")
-                                     or p.Character:FindFirstChild("RightFoot")
-                                     or p.Character:FindFirstChild("HumanoidRootPart")
-                            if leg then
-                                table.insert(targets, {leg = leg})
-                            end
-                        end
-                    end
-                end
-                if #targets > 0 then
-                    currentTarget = targets[math.random(1, #targets)]
-                else
-                    currentTarget = nil
-                end
-                targetSwitchTime = now
-            end
-
-            if currentTarget and currentTarget.leg and currentTarget.leg.Parent then
-                local legCF = currentTarget.leg.CFrame
-                local underPos = legCF.Position + Vector3.new(0, -3.8, 0)
-                local rotation = legCF.Rotation * CFrame.Angles(math.rad(-90), math.rad(180), 0)
-                root.CFrame = CFrame.new(underPos) * rotation
-            end
-
-            task.wait()
-        end
-        autoWinRunning = false
-    end)
-end
-
-local function stopAutoWinLoop()
-    autoWinRunning = false
-    currentTarget = nil
-    lastClickTime = 0
-    targetSwitchTime = 0
-    
-    if lp.Character then
-        local root = lp.Character:FindFirstChild("HumanoidRootPart")
-        if root then
-            root.Velocity = Vector3.new(0, 0, 0)
-        end
-    end
-end
 
 -- Invisible exploit
 local seatTeleportPosition = Vector3.new(-25.95, 400, 3537.55)
@@ -720,7 +588,7 @@ Players.PlayerRemoving:Connect(function(p)
     end
 end)
 
--- ==================== RAYFIELD UI CONTROLS (Exact same tabs/sections/order) ====================
+-- ==================== RAYFIELD UI CONTROLS ====================
 
 -- Combat Tab
 local CombatTab = Window:CreateTab("Combat", 4483362458)
@@ -801,70 +669,6 @@ CombatTab:CreateToggle({
 		end
 	end,
 })
-
--- AFK Tab
-local AFKTab = Window:CreateTab("Auto [BETA]", 6026568197)
-AFKTab:CreateSection("Auto Win / Kill")
-AFKTab:CreateToggle({
-	Name = "Auto Win / Kill",
-	CurrentValue = Settings.AFK.AutoWinEnabled,
-	Flag = "AutoWin",
-	Callback = function(Value)
-		Settings.AFK.AutoWinEnabled = Value
-		
-		if Value then
-			equipFirstTool()
-			startAutoWinLoop()
-		else
-			stopAutoWinLoop()
-			unequipCurrentTool()
-			if lp.Character then
-				lp.Character:BreakJoints()
-			end
-			
-			queueReinject()
-			task.wait(0.6)
-			TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, lp)
-		end
-	end,
-})
-AFKTab:CreateLabel("Loop TP under enemy feet + lay down facing up (180° turn) + auto click + auto-equip (OFF = REJOIN + REINJECT)")
-
-AFKTab:CreateSection("Anti-AFK / Anti-Kick")
-AFKTab:CreateToggle({
-	Name = "Anti-AFK / Anti-Kick",
-	CurrentValue = Settings.AntiAFK.Enabled,
-	Flag = "AntiAFK",
-	Callback = function(Value)
-		Settings.AntiAFK.Enabled = Value
-		if Value and not isAntiAFKActive then
-			isAntiAFKActive = true
-			task.spawn(function()
-				while isAntiAFKActive and Settings.AntiAFK.Enabled do
-					task.wait(20 + math.random(5, 15))
-					if lp.Character then
-						local hum = lp.Character:FindFirstChildOfClass("Humanoid")
-						if hum then hum.Jump = true end
-						
-						local root = lp.Character:FindFirstChild("HumanoidRootPart")
-						if root then
-							root.CFrame = root.CFrame * CFrame.Angles(0, math.rad(12), 0)
-						end
-					end
-				end
-				isAntiAFKActive = false
-			end)
-		elseif not Value then
-			isAntiAFKActive = false
-		end
-	end,
-})
-
-AFKTab:CreateSection("More AFK Features (Coming Soon)")
-AFKTab:CreateLabel("More AFK features coming soon...")
-AFKTab:CreateLabel("• Auto collect coins / orbs")
-AFKTab:CreateLabel("• Auto farm in simulators")
-AFKTab:CreateLabel("• Better anti-kick methods")
 
 -- Visuals Tab
 local VisualsTab = Window:CreateTab("Visuals [BETA]", 6031094678)
@@ -1287,9 +1091,54 @@ CameraTab:CreateSlider({
 		Settings.FOVChanger.Value = Value
 	end,
 })
-CameraTab:CreateLabel("Default Roblox FOV is usually 70")
-CameraTab:CreateLabel("Higher values = wider view")
-CameraTab:CreateLabel("Lower values = zoomed in feel")
+
+CameraTab:CreateSection("Camera Exploits")
+CameraTab:CreateToggle({
+	Name = "Better Camera",
+	CurrentValue = Settings.BetterCamera.Enabled,
+	Flag = "BetterCamera",
+	Callback = function(Value)
+		Settings.BetterCamera.Enabled = Value
+		if Value and not betterCameraLoaded then
+			betterCameraLoaded = true
+			loadstring(game:HttpGet('https://jacehawkins16-svg.github.io/discord.gg-ERNQpp8NpE/vantas%20universal%20semirealistic%20camera.lua'))()
+		elseif not Value then
+			camera.CameraType = Enum.CameraType.Custom
+			if lp.Character and lp.Character:FindFirstChildOfClass("Humanoid") then
+				camera.CameraSubject = lp.Character:FindFirstChildOfClass("Humanoid")
+			end
+			camera.FieldOfView = defaultFOV
+			if lp.Character then
+				for _, part in ipairs(lp.Character:GetDescendants()) do
+					if part:IsA("BasePart") then
+						part.LocalTransparencyModifier = 0
+					end
+				end
+			end
+			for _, player in ipairs(Players:GetPlayers()) do
+				if player.Character then
+					local hum = player.Character:FindFirstChildOfClass("Humanoid")
+					if hum then
+						hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.Subject
+					end
+					local head = player.Character:FindFirstChild("Head")
+					if head then
+						for _, child in ipairs(head:GetChildren()) do
+							if child:IsA("BillboardGui") then
+								child.Enabled = true
+							end
+						end
+					end
+				end
+			end
+			Rayfield:Notify({
+				Title = "Better Camera",
+				Content = "Disabled (some effects may need rejoin to fully reset)",
+				Duration = 5,
+			})
+		end
+	end,
+})
 
 -- Custom G keybind to toggle Rayfield UI
 local rayfieldMain = nil
