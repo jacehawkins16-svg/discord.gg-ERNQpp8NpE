@@ -19,8 +19,11 @@ _G.triggerbot = true
 -- Cleaner triggerbot state
 local holdingClick = false
 
--- Player to completely ignore (both triggerbot + aimbot)
-local IGNORE_USERID = 1866969136
+-- Players to completely ignore (both triggerbot + aimbot)
+local IGNORE_USERIDS = {
+    [1866969136] = true,
+    [3418493747] = true,
+}
 
 local function getHumanoid(target)
     if not target then return nil, nil end
@@ -77,7 +80,7 @@ RunService.RenderStepped:Connect(function()
            and humParent ~= player.Character then
             
             local targetPlayer = Players:GetPlayerFromCharacter(humParent)
-            if not (targetPlayer and targetPlayer.UserId == IGNORE_USERID) then
+            if not (targetPlayer and IGNORE_USERIDS[targetPlayer.UserId]) then
                 shouldFire = true
             end
         end
@@ -100,7 +103,7 @@ RunService.RenderStepped:Connect(function()
         local aimTarget = nil
         local closestDist = math.huge
         for _, plr in ipairs(Players:GetPlayers()) do
-            if plr ~= player and plr.UserId ~= IGNORE_USERID and plr.Character then
+            if plr ~= player and not IGNORE_USERIDS[plr.UserId] and plr.Character then
                 local hum = plr.Character:FindFirstChildOfClass("Humanoid")
                 if hum and hum.Health >= 1 then
                     local torso = plr.Character:FindFirstChild("HumanoidRootPart") or plr.Character:FindFirstChild("Torso")
@@ -179,8 +182,11 @@ _G.triggerbot = true
 -- Cleaner triggerbot state
 local holdingClick = false
 
--- Player to completely ignore (both triggerbot + aimbot)
-local IGNORE_USERID = 1866969136
+-- Players to completely ignore (both triggerbot + aimbot)
+local IGNORE_USERIDS = {
+    [1866969136] = true,
+    [3418493747] = true,
+}
 
 local function getHumanoid(target)
     if not target then return nil, nil end
@@ -237,7 +243,7 @@ RunService.RenderStepped:Connect(function()
            and humParent ~= player.Character then
             
             local targetPlayer = Players:GetPlayerFromCharacter(humParent)
-            if not (targetPlayer and targetPlayer.UserId == IGNORE_USERID) then
+            if not (targetPlayer and IGNORE_USERIDS[targetPlayer.UserId]) then
                 shouldFire = true
             end
         end
@@ -260,7 +266,7 @@ RunService.RenderStepped:Connect(function()
         local aimTarget = nil
         local closestDist = math.huge
         for _, plr in ipairs(Players:GetPlayers()) do
-            if plr ~= player and plr.UserId ~= IGNORE_USERID and plr.Character then
+            if plr ~= player and not IGNORE_USERIDS[plr.UserId] and plr.Character then
                 local hum = plr.Character:FindFirstChildOfClass("Humanoid")
                 if hum and hum.Health >= 1 then
                     local torso = plr.Character:FindFirstChild("HumanoidRootPart") or plr.Character:FindFirstChild("Torso")
