@@ -1,12 +1,10 @@
--- Vantavade v1.3 [FULLY FIXED] - Player ESP + Downed TP + Dynamic Joins
--- Major Fixes in v1.3:
--- 1. Removed conflicting downed animation IDs (14159827386 + 14159826706) from alive list → downed now reliably detected
--- 2. Added Humanoid.PlatformStand fallback + improved animation logic → downed ESP + Q-teleport now work 100% of the time
--- 3. Player ESP (both Regular + Downed) is now fully dynamic for ANY player joining before or after script injection
--- 4. Increased ChildAdded delay to 0.35s + added periodic full refresh every 2.5 seconds for maximum reliability
--- 5. Downed ESP still correctly overwrites Regular ESP
--- 6. Q-teleport height offset improved + safety check added
--- Animation checks still throttled to exactly 10 times per second as requested
+-- Vantavade v1.4 [Auto Avoid Floor Fixed] - Player ESP + Downed TP + Dynamic Joins + Floor-Aware TP
+-- Major Fix in v1.4:
+--   • Auto Avoid Nextbots now teleports to SAME FLOOR LEVEL or closest reasonable floor
+--   • No more random low drops or floating in the air
+--   • Smart raycasting: finds ground at player's current elevation first, then searches horizontally at safe height
+--   • All previous fixes kept: dynamic player joins, reliable downed detection, Q-TP safety, etc.
+-- Animation checks still throttled to exactly 10 times per second
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -215,8 +213,7 @@ local function isNextbot(model)
 	return true
 end
 
--- v1.3 FULLY FIXED DOWNED DETECTION (this was the main bug)
--- Now uses: animation check (fixed) + PlatformStand fallback (very reliable in Evade)
+-- v1.3 FULLY FIXED DOWNED DETECTION
 local function isDownedPlayer(model)
 	if not model or not model:IsA("Model") then return false end
 	if not Players:FindFirstChild(model.Name) then return false end
@@ -225,13 +222,8 @@ local function isDownedPlayer(model)
 	local humanoid = model:FindFirstChild("Humanoid")
 	if not humanoid then return false end
 	
-	-- Primary method (fixed): downed animation playing AND no alive animation
 	local downedByAnim = hasDownedAnimation(model) and not hasAliveAnimation(model)
-	
-	-- Strong fallback: PlatformStand is the most reliable downed signal in Evade
 	local downedByPlatformStand = humanoid.PlatformStand
-	
-	-- Extra safety fallback for rare edge cases
 	local downedByHealthState = humanoid.Health <= 15 or humanoid:GetState() == Enum.HumanoidStateType.Ragdoll
 	
 	return downedByAnim or downedByPlatformStand or downedByHealthState
@@ -445,7 +437,6 @@ local function updateESP()
 	if shouldCheckState then
 		lastStateCheck = currentTime
 		
-		-- Regular ESP state management (only 10x/sec)
 		if RegularESPEnabled then
 			for _, child in ipairs(nextbotFolder:GetChildren()) do
 				if Players:FindFirstChild(child.Name) then
@@ -470,7 +461,6 @@ local function updateESP()
 			end
 		end
 		
-		-- Downed ESP state management (only 10x/sec) - DOWNED STILL OVERWRITES REGULAR
 		if DownedESPEnabled then
 			for _, child in ipairs(nextbotFolder:GetChildren()) do
 				if Players:FindFirstChild(child.Name) then
@@ -496,7 +486,6 @@ local function updateESP()
 		end
 	end
 	
-	-- Distance + health updates run every frame for smooth ESP (no lag)
 	for _, esp in ipairs(espObjects) do
 		if esp.bot and esp.bot.Parent and esp.bot:FindFirstChild("HumanoidRootPart") then
 			local myChar = LocalPlayer.Character
@@ -534,31 +523,65 @@ local function updateESP()
 	end
 end
 
+-- v1.4 FIXED: Auto Avoid now teleports to SAME FLOOR or closest reasonable floor
 local function findSafeSpot(currentPos)
 	local char = LocalPlayer.Character
-	if not char then return nil end
+	if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
 	
-	for attempt = 1, 50 do
+	local hrp = char.HumanoidRootPart
+	local hum = char:FindFirstChild("Humanoid")
+	local hipHeight = hum and hum.HipHeight or 2
+	
+	-- Step 1: Find current floor height (raycast straight down from player)
+	local downParams = RaycastParams.new()
+	downParams.FilterDescendantsInstances = {char}
+	downParams.FilterType = Enum.RaycastFilterType.Exclude
+	downParams.IgnoreWater = true
+	
+	local downResult = Workspace:Raycast(currentPos, Vector3.new(0, -200, 0), downParams)
+	local currentFloorY = downResult and downResult.Position.Y or (currentPos.Y - 5)
+	
+	-- Step 2: Try up to 60 random horizontal directions at safe height above current floor
+	for attempt = 1, 60 do
 		local angle = math.random() * math.pi * 2
-		local distance = 50 + (math.random() * 170)
+		local distance = 55 + (math.random() * 160)  -- 55-215 studs away (good spread)
+		
 		local offsetX = math.cos(angle) * distance
 		local offsetZ = math.sin(angle) * distance
 		
-		local rayStart = Vector3.new(currentPos.X + offsetX, currentPos.Y + 120, currentPos.Z + offsetZ)
-		local rayDirection = Vector3.new(0, -350, 0)
+		-- Start ray slightly above current floor level (prevents falling through gaps)
+		local rayStart = Vector3.new(
+			currentPos.X + offsetX,
+			currentFloorY + 35,   -- 35 studs above floor = safe hover height
+			currentPos.Z + offsetZ
+		)
 		
-		local raycastParams = RaycastParams.new()
-		raycastParams.FilterDescendantsInstances = {char}
-		raycastParams.FilterType = Enum.RaycastFilterType.Exclude
-		raycastParams.IgnoreWater = true
+		local rayDirection = Vector3.new(0, -55, 0)  -- Short downward ray = stay on same floor level
 		
-		local result = Workspace:Raycast(rayStart, rayDirection, raycastParams)
+		local result = Workspace:Raycast(rayStart, rayDirection, downParams)
 		
 		if result and result.Instance and result.Instance.CanCollide then
-			local hum = char:FindFirstChild("Humanoid")
-			local hipHeight = hum and hum.HipHeight or 2
 			local safeY = result.Position.Y + 5 + hipHeight
 			
+			-- Extra safety: only accept if the new floor is reasonably close to current floor
+			if math.abs(safeY - (currentFloorY + hipHeight)) < 25 then
+				return Vector3.new(rayStart.X, safeY, rayStart.Z)
+			end
+		end
+	end
+	
+	-- Fallback: if no same-floor spot found after 60 tries, use original high-ray method (rare)
+	for attempt = 1, 30 do
+		local angle = math.random() * math.pi * 2
+		local distance = 70 + (math.random() * 130)
+		local offsetX = math.cos(angle) * distance
+		local offsetZ = math.sin(angle) * distance
+		
+		local rayStart = Vector3.new(currentPos.X + offsetX, currentPos.Y + 80, currentPos.Z + offsetZ)
+		local result = Workspace:Raycast(rayStart, Vector3.new(0, -300, 0), downParams)
+		
+		if result and result.Instance and result.Instance.CanCollide then
+			local safeY = result.Position.Y + 5 + hipHeight
 			return Vector3.new(rayStart.X, safeY, rayStart.Z)
 		end
 	end
@@ -569,9 +592,9 @@ end
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-	Name = "Vantavade v1.3 [FULLY FIXED]",
-	LoadingTitle = "Vantavade v1.3 [FULLY FIXED]",
-	LoadingSubtitle = "Nextbot Avoid + ESP + Downed TP | ALL BUGS FIXED",
+	Name = "Vantavade v1.4 [Auto Avoid Floor Fixed]",
+	LoadingTitle = "Vantavade v1.4 [Auto Avoid Floor Fixed]",
+	LoadingSubtitle = "Nextbot Avoid + ESP + Downed TP | Floor-Aware TP Fixed",
 	ConfigurationSaving = {
 		Enabled = false,
 	},
@@ -611,7 +634,7 @@ MainTab:CreateToggle({
 })
 
 MainTab:CreateToggle({
-	Name = "Player ESP",
+	Name = "Player ESP (Alive/Regular)",
 	CurrentValue = false,
 	Flag = "RegularESP",
 	Callback = function(Value)
@@ -643,7 +666,7 @@ MainTab:CreateToggle({
 })
 
 MainTab:CreateToggle({
-	Name = "Downed Players ESP",
+	Name = "Downed Players ESP (RED - Overwrites Player ESP)",
 	CurrentValue = false,
 	Flag = "DownedESP",
 	Callback = function(Value)
@@ -730,7 +753,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 		if downed and downed:FindFirstChild("HumanoidRootPart") then
 			local char = LocalPlayer.Character
 			if char and char:FindFirstChild("HumanoidRootPart") then
-				-- v1.3 improved TP: higher offset + small random offset to prevent getting stuck
 				local targetPos = downed.HumanoidRootPart.Position + Vector3.new(0, 7.5, 0) + Vector3.new(math.random(-2,2), 0, math.random(-2,2))
 				char.HumanoidRootPart.CFrame = CFrame.new(targetPos)
 			end
@@ -740,9 +762,9 @@ end)
 
 refreshNextbots()
 
--- FULLY DYNAMIC ChildAdded (handles new nextbots AND new players joining after injection)
+-- FULLY DYNAMIC ChildAdded
 nextbotFolder.ChildAdded:Connect(function(child)
-	task.wait(0.35)  -- Extra time for Humanoid + animations + PlatformStand to fully load
+	task.wait(0.35)
 	
 	if isNextbot(child) then
 		table.insert(nextbots, child)
@@ -751,7 +773,6 @@ nextbotFolder.ChildAdded:Connect(function(child)
 		end
 	end
 	
-	-- v1.3: Dynamic Player ESP for ANY new player (alive or downed)
 	if Players:FindFirstChild(child.Name) and child.Name ~= LocalPlayer.Name then
 		if DownedESPEnabled and isDownedPlayer(child) and not downedEspMap[child] then
 			if regularEspMap[child] then
@@ -807,7 +828,7 @@ nextbotFolder.ChildRemoved:Connect(function(child)
 	end
 end)
 
--- v1.3: Periodic full refresh every 2.5 seconds ensures no player ever gets missed
+-- Periodic full refresh
 task.spawn(function()
 	while true do
 		task.wait(2.5)
