@@ -1,8 +1,8 @@
--- Vantavade v1.5 [Auto Avoid Ground Safe] - Player ESP + Downed TP + Dynamic Joins + Floor-Aware TP
--- Major Fix in v1.5:
---   • Auto Avoid Nextbots NOW 100% SAFE: never teleports UNDER the ground
---   • Improved findSafeSpot: higher ray start (+65 studs), longer downward ray (-140 studs), 
---     extra clearance (+6.5 studs), more attempts (75), and strict floor validation
+-- Vantavade v1.4 [Auto Avoid Floor Fixed] - Player ESP + Downed TP + Dynamic Joins + Floor-Aware TP
+-- Major Fix in v1.4:
+--   • Auto Avoid Nextbots now teleports to SAME FLOOR LEVEL or closest reasonable floor
+--   • No more random low drops or floating in the air
+--   • Smart raycasting: finds ground at player's current elevation first, then searches horizontally at safe height
 --   • All previous fixes kept: dynamic player joins, reliable downed detection, Q-TP safety, etc.
 -- Animation checks still throttled to exactly 10 times per second
 
@@ -523,14 +523,14 @@ local function updateESP()
 	end
 end
 
--- v1.5 FIXED: Auto Avoid now 100% SAFE - never teleports UNDER the ground
+-- v1.4 FIXED: Auto Avoid now teleports to SAME FLOOR or closest reasonable floor
 local function findSafeSpot(currentPos)
 	local char = LocalPlayer.Character
 	if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
 	
 	local hrp = char.HumanoidRootPart
 	local hum = char:FindFirstChild("Humanoid")
-	local hipHeight = hum and hum.HipHeight or 2.5
+	local hipHeight = hum and hum.HipHeight or 2
 	
 	-- Step 1: Find current floor height (raycast straight down from player)
 	local downParams = RaycastParams.new()
@@ -541,51 +541,47 @@ local function findSafeSpot(currentPos)
 	local downResult = Workspace:Raycast(currentPos, Vector3.new(0, -200, 0), downParams)
 	local currentFloorY = downResult and downResult.Position.Y or (currentPos.Y - 5)
 	
-	-- Step 2: Try up to 75 random horizontal directions with MUCH safer raycasting
-	for attempt = 1, 75 do
+	-- Step 2: Try up to 60 random horizontal directions at safe height above current floor
+	for attempt = 1, 60 do
 		local angle = math.random() * math.pi * 2
-		local distance = 55 + (math.random() * 165)  -- good spread
+		local distance = 55 + (math.random() * 160)  -- 55-215 studs away (good spread)
 		
 		local offsetX = math.cos(angle) * distance
 		local offsetZ = math.sin(angle) * distance
 		
-		-- Start ray MUCH higher above current floor (prevents hitting ceilings or low platforms)
+		-- Start ray slightly above current floor level (prevents falling through gaps)
 		local rayStart = Vector3.new(
 			currentPos.X + offsetX,
-			currentFloorY + 65,   -- +65 studs = very safe hover height
+			currentFloorY + 35,   -- 35 studs above floor = safe hover height
 			currentPos.Z + offsetZ
 		)
 		
-		local rayDirection = Vector3.new(0, -140, 0)  -- long downward ray
+		local rayDirection = Vector3.new(0, -55, 0)  -- Short downward ray = stay on same floor level
 		
 		local result = Workspace:Raycast(rayStart, rayDirection, downParams)
 		
 		if result and result.Instance and result.Instance.CanCollide then
-			local safeY = result.Position.Y + 6.5 + hipHeight  -- extra padding to stay above ground
+			local safeY = result.Position.Y + 5 + hipHeight
 			
-			-- Strict floor validation: only accept spots on the same or very close floor level
-			if math.abs(safeY - (currentFloorY + hipHeight)) < 28 then
-				-- FINAL SAFETY CHECK: make sure we are actually above ground
-				local finalDownCheck = Workspace:Raycast(Vector3.new(rayStart.X, safeY + 10, rayStart.Z), Vector3.new(0, -20, 0), downParams)
-				if finalDownCheck and finalDownCheck.Instance and finalDownCheck.Instance.CanCollide then
-					return Vector3.new(rayStart.X, safeY, rayStart.Z)
-				end
+			-- Extra safety: only accept if the new floor is reasonably close to current floor
+			if math.abs(safeY - (currentFloorY + hipHeight)) < 25 then
+				return Vector3.new(rayStart.X, safeY, rayStart.Z)
 			end
 		end
 	end
 	
-	-- Rare fallback (high start, still safe)
-	for attempt = 1, 35 do
+	-- Fallback: if no same-floor spot found after 60 tries, use original high-ray method (rare)
+	for attempt = 1, 30 do
 		local angle = math.random() * math.pi * 2
 		local distance = 70 + (math.random() * 130)
 		local offsetX = math.cos(angle) * distance
 		local offsetZ = math.sin(angle) * distance
 		
-		local rayStart = Vector3.new(currentPos.X + offsetX, currentPos.Y + 95, currentPos.Z + offsetZ)
-		local result = Workspace:Raycast(rayStart, Vector3.new(0, -280, 0), downParams)
+		local rayStart = Vector3.new(currentPos.X + offsetX, currentPos.Y + 80, currentPos.Z + offsetZ)
+		local result = Workspace:Raycast(rayStart, Vector3.new(0, -300, 0), downParams)
 		
 		if result and result.Instance and result.Instance.CanCollide then
-			local safeY = result.Position.Y + 6.5 + hipHeight
+			local safeY = result.Position.Y + 5 + hipHeight
 			return Vector3.new(rayStart.X, safeY, rayStart.Z)
 		end
 	end
@@ -596,9 +592,9 @@ end
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-	Name = "Vantavade v1.5 [Auto Avoid Ground Safe]",
-	LoadingTitle = "Vantavade v1.5 [Auto Avoid Ground Safe]",
-	LoadingSubtitle = "Nextbot Avoid + ESP + Downed TP | Underground TP Fixed",
+	Name = "Vantavade v1.4 [Auto Avoid Floor Fixed]",
+	LoadingTitle = "Vantavade v1.4 [Auto Avoid Floor Fixed]",
+	LoadingSubtitle = "Nextbot Avoid + ESP + Downed TP | Floor-Aware TP Fixed",
 	ConfigurationSaving = {
 		Enabled = false,
 	},
