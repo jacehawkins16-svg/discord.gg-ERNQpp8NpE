@@ -592,7 +592,7 @@ end
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-	Name = "Vantavade v1.4 [Auto Avoid Floor Fixed]",
+	Name = "Vantavade v1.4 [BETA]",
 	LoadingTitle = "Vantavade v1.4 [Auto Avoid Floor Fixed]",
 	LoadingSubtitle = "Nextbot Avoid + ESP + Downed TP | Floor-Aware TP Fixed",
 	ConfigurationSaving = {
@@ -634,7 +634,7 @@ MainTab:CreateToggle({
 })
 
 MainTab:CreateToggle({
-	Name = "Player ESP (Alive/Regular)",
+	Name = "Player ESP",
 	CurrentValue = false,
 	Flag = "RegularESP",
 	Callback = function(Value)
@@ -666,7 +666,7 @@ MainTab:CreateToggle({
 })
 
 MainTab:CreateToggle({
-	Name = "Downed Players ESP (RED - Overwrites Player ESP)",
+	Name = "Downed Players ESP",
 	CurrentValue = false,
 	Flag = "DownedESP",
 	Callback = function(Value)
