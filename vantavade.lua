@@ -611,7 +611,7 @@ MainTab:CreateToggle({
 })
 
 MainTab:CreateToggle({
-	Name = "Player ESP (Alive/Regular)",
+	Name = "Player ESP",
 	CurrentValue = false,
 	Flag = "RegularESP",
 	Callback = function(Value)
@@ -643,7 +643,7 @@ MainTab:CreateToggle({
 })
 
 MainTab:CreateToggle({
-	Name = "Downed Players ESP (RED - Overwrites Player ESP)",
+	Name = "Downed Players ESP",
 	CurrentValue = false,
 	Flag = "DownedESP",
 	Callback = function(Value)
