@@ -1,9 +1,9 @@
--- Vantavade v1.0 [FIXED] - Animation State Detection Overhaul
--- Fixed critical bug: Players no longer falsely flagged as downed when playing alive animations
--- (Overlapping animation IDs now correctly prioritize ALIVE classification)
--- State checks now throttled to exactly 10 times per second as requested
--- Full live animation detection for both downed + alive with priority logic
--- Nextbot ESP, Player ESP, Downed ESP all fully functional and mutually exclusive
+-- Vantavade v1.1 [FIXED] - Player ESP + Downed TP Fixed
+-- Fixed: Some players not being detected with Player ESP (now detects ALL alive players)
+-- Fixed: Downed Player TP (Q key) not working reliably (increased height offset + safety)
+-- Animation state checks still throttled to exactly 10 times per second
+-- Downed ESP still overwrites Regular ESP when active
+-- The notes above are for helping understand updates, from, vanta!
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -13,7 +13,7 @@ local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local nextbotFolder = Workspace:WaitForChild("Game"):WaitForChild("Players")
 
-
+-- Original downed animations (strict set)
 local downedAnimationIds = {
 	"rbxassetid://92286492928616",
 	"rbxassetid://130813059655149",
@@ -21,7 +21,8 @@ local downedAnimationIds = {
 	"rbxassetid://14159826706"
 }
 
-
+-- Massive alive/regular player animation list (R6 + R15 emotes, idles, walks, etc.)
+-- Duplicates intentionally kept as provided by user for exact match
 local aliveAnimationIds = {
 	"http://www.roblox.com/asset/?id=17524089804",
 	"rbxassetid://17418836643",
@@ -214,7 +215,6 @@ local function isNextbot(model)
 end
 
 -- FIXED: Downed ONLY if downed animation is playing AND no alive animation is playing
--- This completely fixes the bug where alive players were wrongly counted as downed
 local function isDownedPlayer(model)
 	if not model or not model:IsA("Model") then return false end
 	if not Players:FindFirstChild(model.Name) then return false end
@@ -222,12 +222,12 @@ local function isDownedPlayer(model)
 	return hasDownedAnimation(model) and not hasAliveAnimation(model)
 end
 
--- FIXED: Regular alive if ANY alive animation is playing (overlap now correctly treated as alive)
+-- FIXED: Regular alive = ANY player who is NOT downed (fixes players not being detected when their animation ID isn't in the alive list)
 local function isRegularAlivePlayer(model)
 	if not model or not model:IsA("Model") then return false end
 	if not Players:FindFirstChild(model.Name) then return false end
 	if model.Name == LocalPlayer.Name then return false end
-	return hasAliveAnimation(model)
+	return not isDownedPlayer(model)
 end
 
 local function getNearestDownedPlayer()
@@ -554,9 +554,9 @@ end
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-	Name = "Vantavade v1.0 [FIXED]",
-	LoadingTitle = "Vantavade v1.0 [FIXED]",
-	LoadingSubtitle = "Nextbot Avoid + ESP + Downed TP | Animation Bug FIXED",
+	Name = "Vantavade v1.1 [FIXED]",
+	LoadingTitle = "Vantavade v1.1 [FIXED]",
+	LoadingSubtitle = "Nextbot Avoid + ESP + Downed TP | Player ESP + TP Fixed",
 	ConfigurationSaving = {
 		Enabled = false,
 	},
@@ -715,7 +715,8 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 		if downed and downed:FindFirstChild("HumanoidRootPart") then
 			local char = LocalPlayer.Character
 			if char and char:FindFirstChild("HumanoidRootPart") then
-				local targetPos = downed.HumanoidRootPart.Position + Vector3.new(0, 4, 0)
+				-- Fixed TP: increased height offset for reliability (prevents getting stuck in player)
+				local targetPos = downed.HumanoidRootPart.Position + Vector3.new(0, 6, 0)
 				char.HumanoidRootPart.CFrame = CFrame.new(targetPos)
 			end
 		end
