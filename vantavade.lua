@@ -754,7 +754,7 @@ MainTab:CreateToggle({
 })
 
 MainTab:CreateToggle({
-	Name = "Auto Avoid Nextbots (Random Spawn TP)",
+	Name = "Auto Avoid Nextbots",
 	CurrentValue = false,
 	Flag = "AutoAvoid",
 	Callback = function(Value)
