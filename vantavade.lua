@@ -1,10 +1,11 @@
--- Vantavade v1.4 [Auto Avoid Floor Fixed] - Player ESP + Downed TP + Dynamic Joins + Floor-Aware TP
--- Major Fix in v1.4:
---   • Auto Avoid Nextbots now teleports to SAME FLOOR LEVEL or closest reasonable floor
---   • No more random low drops or floating in the air
---   • Smart raycasting: finds ground at player's current elevation first, then searches horizontally at safe height
---   • All previous fixes kept: dynamic player joins, reliable downed detection, Q-TP safety, etc.
--- Animation checks still throttled to exactly 10 times per second
+-- Vantavade v1.6 [Scary Spawns For Farming Added] - Player ESP + Downed TP + Dynamic Joins + Random Spawn/ItemSpawn Avoid
+-- Major Update in v1.6:
+--   • New "Scary Spawns [For Farming]" toggle
+--   • Automatically teleports AWAY from regular SpawnLocations (15 stud radius)
+--   • ONLY teleports to ItemSpawns (perfect for farming items without landing on player spawns)
+--   • Separate cached lists: spawnPositions (to avoid) + itemSpawnPositions (teleport targets)
+--   • Independent loop + 15 stud radius check
+--   • All previous features kept (Auto Avoid still uses mixed spawns/itemspawns)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -23,7 +24,6 @@ local downedAnimationIds = {
 }
 
 -- Massive alive/regular player animation list (R6 + R15 emotes, idles, walks, etc.)
--- CLEANED in v1.3: Removed the two conflicting downed IDs that were breaking detection
 local aliveAnimationIds = {
 	"http://www.roblox.com/asset/?id=17524089804",
 	"rbxassetid://17418836643",
@@ -145,7 +145,7 @@ local function normalizeAnimId(idStr)
 	return idStr
 end
 
--- Fast lookup sets (duplicates automatically removed by table keys)
+-- Fast lookup sets
 local downedAnimSet = {}
 for _, id in ipairs(downedAnimationIds) do
 	local norm = normalizeAnimId(id)
@@ -158,7 +158,6 @@ for _, id in ipairs(aliveAnimationIds) do
 	if norm then aliveAnimSet[norm] = true end
 end
 
--- Check if ANY currently playing animation track matches downed set
 local function hasDownedAnimation(model)
 	if not model or not model:FindFirstChild("Humanoid") then return false end
 	local humanoid = model.Humanoid
@@ -174,7 +173,6 @@ local function hasDownedAnimation(model)
 	return false
 end
 
--- Check if ANY currently playing animation track matches alive set
 local function hasAliveAnimation(model)
 	if not model or not model:FindFirstChild("Humanoid") then return false end
 	local humanoid = model.Humanoid
@@ -199,12 +197,13 @@ local ESPEnabled = false
 local DownedESPEnabled = false
 local RegularESPEnabled = false
 local AutoAvoidEnabled = false
+local ScarySpawnsEnabled = false   -- NEW v1.6
 local DownedTPEnabled = false
 local updateConnection = nil
 
--- Throttle animation state checks to exactly 10 times per second (as requested)
+-- Throttle animation state checks
 local lastStateCheck = 0
-local STATE_CHECK_INTERVAL = 0.1  -- 10 checks/sec
+local STATE_CHECK_INTERVAL = 0.1
 
 local function isNextbot(model)
 	if not model or not model:IsA("Model") then return false end
@@ -213,7 +212,6 @@ local function isNextbot(model)
 	return true
 end
 
--- v1.3 FULLY FIXED DOWNED DETECTION
 local function isDownedPlayer(model)
 	if not model or not model:IsA("Model") then return false end
 	if not Players:FindFirstChild(model.Name) then return false end
@@ -229,7 +227,6 @@ local function isDownedPlayer(model)
 	return downedByAnim or downedByPlatformStand or downedByHealthState
 end
 
--- Regular alive = ANY player who is NOT downed
 local function isRegularAlivePlayer(model)
 	if not model or not model:IsA("Model") then return false end
 	if not Players:FindFirstChild(model.Name) then return false end
@@ -262,6 +259,124 @@ local function refreshNextbots()
 		end
 	end
 end
+
+-- ==================== v1.5: RANDOM SPAWN / ITEMSPAWN TELEPORT SYSTEM (for Auto Avoid) ====================
+local safePositions = {}
+
+local function getAllSpawnPositions()
+	local positions = {}
+	
+	local gameFolder = Workspace:FindFirstChild("Game")
+	if gameFolder then
+		local mapFolder = gameFolder:FindFirstChild("Map")
+		if mapFolder then
+			local partsFolder = mapFolder:FindFirstChild("Parts")
+			if partsFolder then
+				local spawnsFolder = partsFolder:FindFirstChild("Spawns")
+				if spawnsFolder then
+					for _, spawn in ipairs(spawnsFolder:GetChildren()) do
+						if (spawn:IsA("SpawnLocation") or spawn:IsA("BasePart")) and spawn.Position then
+							table.insert(positions, spawn.Position + Vector3.new(0, 4, 0))
+						end
+					end
+				end
+			end
+			
+			local itemSpawnsFolder = mapFolder:FindFirstChild("ItemSpawns")
+			if itemSpawnsFolder then
+				for _, itemSpawn in ipairs(itemSpawnsFolder:GetChildren()) do
+					if (itemSpawn:IsA("Part") or itemSpawn:IsA("BasePart") or itemSpawn:IsA("SpawnLocation")) and itemSpawn.Position then
+						table.insert(positions, itemSpawn.Position + Vector3.new(0, 4, 0))
+					end
+				end
+			end
+		end
+	end
+	
+	return positions
+end
+
+local function refreshSafePositions()
+	safePositions = getAllSpawnPositions()
+	if #safePositions > 0 then
+		print("Vantavade v1.6: Loaded " .. #safePositions .. " safe spawn / itemspawn points")
+	else
+		warn("Vantavade v1.6: No spawn or itemspawn points found yet (map may still be loading)")
+	end
+end
+
+local function getRandomSafePosition()
+	if #safePositions < 3 then
+		refreshSafePositions()
+	end
+	
+	if #safePositions == 0 then
+		return nil
+	end
+	
+	local chosen = safePositions[math.random(1, #safePositions)]
+	local offset = Vector3.new(math.random(-8, 8), 1.5, math.random(-8, 8))
+	return chosen + offset
+end
+-- =========================================================================================
+
+-- ==================== NEW v1.6: SCARY SPAWNS SYSTEM (Avoid Spawns → TP to ItemSpawns only) ====================
+local spawnPositions = {}      -- Regular SpawnLocations to AVOID (15 stud radius)
+local itemSpawnPositions = {}  -- ONLY ItemSpawns for teleport target
+
+local function refreshSpawnPositions()
+	spawnPositions = {}
+	local gameFolder = Workspace:FindFirstChild("Game")
+	if gameFolder then
+		local mapFolder = gameFolder:FindFirstChild("Map")
+		if mapFolder then
+			local partsFolder = mapFolder:FindFirstChild("Parts")
+			if partsFolder then
+				local spawnsFolder = partsFolder:FindFirstChild("Spawns")
+				if spawnsFolder then
+					for _, spawn in ipairs(spawnsFolder:GetChildren()) do
+						if (spawn:IsA("SpawnLocation") or spawn:IsA("BasePart")) and spawn.Position then
+							table.insert(spawnPositions, spawn.Position)
+						end
+					end
+				end
+			end
+		end
+	end
+end
+
+local function refreshItemSpawnPositions()
+	itemSpawnPositions = {}
+	local gameFolder = Workspace:FindFirstChild("Game")
+	if gameFolder then
+		local mapFolder = gameFolder:FindFirstChild("Map")
+		if mapFolder then
+			local itemSpawnsFolder = mapFolder:FindFirstChild("ItemSpawns")
+			if itemSpawnsFolder then
+				for _, itemSpawn in ipairs(itemSpawnsFolder:GetChildren()) do
+					if (itemSpawn:IsA("Part") or itemSpawn:IsA("BasePart") or itemSpawn:IsA("SpawnLocation")) and itemSpawn.Position then
+						table.insert(itemSpawnPositions, itemSpawn.Position + Vector3.new(0, 4, 0))
+					end
+				end
+			end
+		end
+	end
+end
+
+local function getRandomItemSpawnPosition()
+	if #itemSpawnPositions < 3 then
+		refreshItemSpawnPositions()
+	end
+	
+	if #itemSpawnPositions == 0 then
+		return nil
+	end
+	
+	local chosen = itemSpawnPositions[math.random(1, #itemSpawnPositions)]
+	local offset = Vector3.new(math.random(-8, 8), 1.5, math.random(-8, 8))
+	return chosen + offset
+end
+-- =========================================================================================
 
 local function createNextbotESP(bot)
 	if not bot then return end
@@ -337,8 +452,7 @@ local function createNextbotESP(bot)
 end
 
 local function createDownedESP(playerModel)
-	if not playerModel then return end
-	if playerModel.Name == LocalPlayer.Name then return end
+	if not playerModel or playerModel.Name == LocalPlayer.Name then return end
 	
 	local adornee = playerModel:FindFirstChild("Head") or playerModel:FindFirstChild("HumanoidRootPart")
 	if not adornee then return end
@@ -384,8 +498,7 @@ local function createDownedESP(playerModel)
 end
 
 local function createRegularESP(playerModel)
-	if not playerModel then return end
-	if playerModel.Name == LocalPlayer.Name then return end
+	if not playerModel or playerModel.Name == LocalPlayer.Name then return end
 	
 	local adornee = playerModel:FindFirstChild("Head") or playerModel:FindFirstChild("HumanoidRootPart")
 	if not adornee then return end
@@ -523,78 +636,12 @@ local function updateESP()
 	end
 end
 
--- v1.4 FIXED: Auto Avoid now teleports to SAME FLOOR or closest reasonable floor
-local function findSafeSpot(currentPos)
-	local char = LocalPlayer.Character
-	if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
-	
-	local hrp = char.HumanoidRootPart
-	local hum = char:FindFirstChild("Humanoid")
-	local hipHeight = hum and hum.HipHeight or 2
-	
-	-- Step 1: Find current floor height (raycast straight down from player)
-	local downParams = RaycastParams.new()
-	downParams.FilterDescendantsInstances = {char}
-	downParams.FilterType = Enum.RaycastFilterType.Exclude
-	downParams.IgnoreWater = true
-	
-	local downResult = Workspace:Raycast(currentPos, Vector3.new(0, -200, 0), downParams)
-	local currentFloorY = downResult and downResult.Position.Y or (currentPos.Y - 5)
-	
-	-- Step 2: Try up to 60 random horizontal directions at safe height above current floor
-	for attempt = 1, 60 do
-		local angle = math.random() * math.pi * 2
-		local distance = 55 + (math.random() * 160)  -- 55-215 studs away (good spread)
-		
-		local offsetX = math.cos(angle) * distance
-		local offsetZ = math.sin(angle) * distance
-		
-		-- Start ray slightly above current floor level (prevents falling through gaps)
-		local rayStart = Vector3.new(
-			currentPos.X + offsetX,
-			currentFloorY + 35,   -- 35 studs above floor = safe hover height
-			currentPos.Z + offsetZ
-		)
-		
-		local rayDirection = Vector3.new(0, -55, 0)  -- Short downward ray = stay on same floor level
-		
-		local result = Workspace:Raycast(rayStart, rayDirection, downParams)
-		
-		if result and result.Instance and result.Instance.CanCollide then
-			local safeY = result.Position.Y + 5 + hipHeight
-			
-			-- Extra safety: only accept if the new floor is reasonably close to current floor
-			if math.abs(safeY - (currentFloorY + hipHeight)) < 25 then
-				return Vector3.new(rayStart.X, safeY, rayStart.Z)
-			end
-		end
-	end
-	
-	-- Fallback: if no same-floor spot found after 60 tries, use original high-ray method (rare)
-	for attempt = 1, 30 do
-		local angle = math.random() * math.pi * 2
-		local distance = 70 + (math.random() * 130)
-		local offsetX = math.cos(angle) * distance
-		local offsetZ = math.sin(angle) * distance
-		
-		local rayStart = Vector3.new(currentPos.X + offsetX, currentPos.Y + 80, currentPos.Z + offsetZ)
-		local result = Workspace:Raycast(rayStart, Vector3.new(0, -300, 0), downParams)
-		
-		if result and result.Instance and result.Instance.CanCollide then
-			local safeY = result.Position.Y + 5 + hipHeight
-			return Vector3.new(rayStart.X, safeY, rayStart.Z)
-		end
-	end
-	
-	return nil
-end
-
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-	Name = "Vantavade v1.4 [BETA]",
-	LoadingTitle = "Vantavade v1.4 [Auto Avoid Floor Fixed]",
-	LoadingSubtitle = "Nextbot Avoid + ESP + Downed TP | Floor-Aware TP Fixed",
+	Name = "Vantavade v1.6 [Scary Spawns Added]",
+	LoadingTitle = "Vantavade v1.6",
+	LoadingSubtitle = "Nextbot Avoid + Scary Spawns (Farming) + ESP + Downed TP",
 	ConfigurationSaving = {
 		Enabled = false,
 	},
@@ -707,7 +754,7 @@ MainTab:CreateToggle({
 })
 
 MainTab:CreateToggle({
-	Name = "Auto Avoid Nextbots",
+	Name = "Auto Avoid Nextbots (Random Spawn TP)",
 	CurrentValue = false,
 	Flag = "AutoAvoid",
 	Callback = function(Value)
@@ -735,7 +782,47 @@ MainTab:CreateToggle({
 					end
 					
 					if shouldTeleport then
-						local safePos = findSafeSpot(hrp.Position)
+						local safePos = getRandomSafePosition()
+						if safePos then
+							hrp.CFrame = CFrame.new(safePos)
+						end
+					end
+				end
+			end)
+		end
+	end,
+})
+
+-- ==================== NEW v1.6 TOGGLE ====================
+MainTab:CreateToggle({
+	Name = "Scary Spawns [For Farming]",
+	CurrentValue = false,
+	Flag = "ScarySpawns",
+	Callback = function(Value)
+		ScarySpawnsEnabled = Value
+		
+		if Value then
+			task.spawn(function()
+				while ScarySpawnsEnabled do
+					task.wait(0.15)
+					
+					local char = LocalPlayer.Character
+					if not char or not char:FindFirstChild("HumanoidRootPart") then continue end
+					
+					local hrp = char.HumanoidRootPart
+					local shouldTeleport = false
+					
+					-- Check distance to ANY regular spawn (15 stud radius)
+					for _, spawnPos in ipairs(spawnPositions) do
+						local dist = (hrp.Position - spawnPos).Magnitude
+						if dist < 15 then
+							shouldTeleport = true
+							break
+						end
+					end
+					
+					if shouldTeleport then
+						local safePos = getRandomItemSpawnPosition()
 						if safePos then
 							hrp.CFrame = CFrame.new(safePos)
 						end
@@ -761,6 +848,9 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 refreshNextbots()
+refreshSafePositions()
+refreshSpawnPositions()      -- v1.6
+refreshItemSpawnPositions()  -- v1.6
 
 -- FULLY DYNAMIC ChildAdded
 nextbotFolder.ChildAdded:Connect(function(child)
@@ -828,7 +918,7 @@ nextbotFolder.ChildRemoved:Connect(function(child)
 	end
 end)
 
--- Periodic full refresh
+-- Periodic full refresh (ESP + safe positions + scary positions)
 task.spawn(function()
 	while true do
 		task.wait(2.5)
@@ -855,6 +945,13 @@ task.spawn(function()
 					end
 				end
 			end
+		end
+		
+		-- Refresh all position caches every ~12 seconds
+		if tick() % 12 < 3 then
+			refreshSafePositions()
+			refreshSpawnPositions()
+			refreshItemSpawnPositions()
 		end
 	end
 end)
