@@ -639,9 +639,9 @@ end
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-	Name = "Vantavade v1.6 [Scary Spawns Added]",
+	Name = "Vantavade v1.6 [BETA]",
 	LoadingTitle = "Vantavade v1.6",
-	LoadingSubtitle = "Nextbot Avoid + Scary Spawns (Farming) + ESP + Downed TP",
+	LoadingSubtitle = "Nextbot Avoid + Scary Spawns + ESP + Downed TP",
 	ConfigurationSaving = {
 		Enabled = false,
 	},
