@@ -1,11 +1,12 @@
--- Vantavade v1.6 [Scary Spawns For Farming Added] - Player ESP + Downed TP + Dynamic Joins + Random Spawn/ItemSpawn Avoid
--- Major Update in v1.6:
---   • New "Scary Spawns [For Farming]" toggle
---   • Automatically teleports AWAY from regular SpawnLocations (15 stud radius)
---   • ONLY teleports to ItemSpawns (perfect for farming items without landing on player spawns)
---   • Separate cached lists: spawnPositions (to avoid) + itemSpawnPositions (teleport targets)
---   • Independent loop + 15 stud radius check
---   • All previous features kept (Auto Avoid still uses mixed spawns/itemspawns)
+-- Vantavade v1.7 [Auto Collect Collectables Added] - Player ESP + Downed TP + Dynamic Joins + Random Spawn/ItemSpawn Avoid + Scary Spawns
+-- Major Update in v1.7:
+--   • New "Auto Collect Collectables" toggle
+--   • Teleports ALL collectables (and everything inside each collectable model) directly to the player
+--   • Works on Workspace.Game.Effects.Collectables.Interactables and all children/descendants inside every *collectable*
+--   • Uses PivotTo on Models (preserves entire hierarchy + inner parts to prevent bugs)
+--   • Falls back to CFrame on loose BaseParts
+--   • Fast 0.1s loop (instant farming, no player teleport)
+--   • All previous features kept (Scary Spawns, Deployables ESP, etc.)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -14,6 +15,8 @@ local UserInputService = game:GetService("UserInputService")
 
 local LocalPlayer = Players.LocalPlayer
 local nextbotFolder = Workspace:WaitForChild("Game"):WaitForChild("Players")
+local deployablesFolder = Workspace:WaitForChild("Game"):WaitForChild("Effects"):WaitForChild("Deployables")
+local collectablesFolder = Workspace:WaitForChild("Game"):WaitForChild("Effects"):WaitForChild("Collectables"):WaitForChild("Interactables")  -- NEW v1.7
 
 -- Original downed animations (strict set)
 local downedAnimationIds = {
@@ -192,13 +195,17 @@ local nextbots = {}
 local espObjects = {}
 local downedEspMap = {}
 local regularEspMap = {}
+local deployableEspObjects = {}   -- NEW: Deployables ESP storage
 
 local ESPEnabled = false
 local DownedESPEnabled = false
 local RegularESPEnabled = false
+local DeployablesESPEnabled = false   -- NEW
 local AutoAvoidEnabled = false
-local ScarySpawnsEnabled = false   -- NEW v1.6
+local ScarySpawnsEnabled = false
 local DownedTPEnabled = false
+local AutoCollectEnabled = false   -- NEW v1.7
+
 local updateConnection = nil
 
 -- Throttle animation state checks
@@ -299,9 +306,9 @@ end
 local function refreshSafePositions()
 	safePositions = getAllSpawnPositions()
 	if #safePositions > 0 then
-		print("Vantavade v1.6: Loaded " .. #safePositions .. " safe spawn / itemspawn points")
+		print("Vantavade v1.7: Loaded " .. #safePositions .. " safe spawn / itemspawn points")
 	else
-		warn("Vantavade v1.6: No spawn or itemspawn points found yet (map may still be loading)")
+		warn("Vantavade v1.7: No spawn or itemspawn points found yet (map may still be loading)")
 	end
 end
 
@@ -375,6 +382,64 @@ local function getRandomItemSpawnPosition()
 	local chosen = itemSpawnPositions[math.random(1, #itemSpawnPositions)]
 	local offset = Vector3.new(math.random(-8, 8), 1.5, math.random(-8, 8))
 	return chosen + offset
+end
+-- =========================================================================================
+
+-- ==================== NEW: DEPLOYABLES ESP ====================
+local function createDeployableESP(deploy)
+	if not deploy then return end
+	
+	-- Ensure it has visual parts (so we can highlight everything inside the deployable)
+	if not deploy:FindFirstChildWhichIsA("BasePart") then return end
+	
+	-- Choose root part for billboard + distance (prefers PrimaryPart)
+	local rootPart = nil
+	if deploy:IsA("Model") then
+		rootPart = deploy.PrimaryPart or deploy:FindFirstChild("HumanoidRootPart") or deploy:FindFirstChildWhichIsA("BasePart")
+	elseif deploy:IsA("BasePart") then
+		rootPart = deploy
+	end
+	if not rootPart then return end
+	
+	local highlight = Instance.new("Highlight")
+	highlight.Name = "DeployableESP_Highlight"
+	highlight.Adornee = deploy          -- Highlights the ENTIRE deployable + everything inside it
+	highlight.FillColor = Color3.fromRGB(255, 140, 0)     -- Distinct orange (different from red/green nextbot/player)
+	highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+	highlight.FillTransparency = 0.45
+	highlight.OutlineTransparency = 0
+	highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+	highlight.Parent = deploy
+	
+	local billboard = Instance.new("BillboardGui")
+	billboard.Name = "DeployableESP_Billboard"
+	billboard.Adornee = rootPart
+	billboard.AlwaysOnTop = true
+	billboard.Size = UDim2.new(5, 0, 2, 0)
+	billboard.StudsOffset = Vector3.new(0, 3, 0)
+	billboard.LightInfluence = 0
+	
+	local textLabel = Instance.new("TextLabel")
+	textLabel.Name = "InfoLabel"
+	textLabel.BackgroundTransparency = 1
+	textLabel.TextColor3 = Color3.fromRGB(255, 140, 0)
+	textLabel.TextStrokeTransparency = 0
+	textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+	textLabel.TextScaled = true
+	textLabel.Font = Enum.Font.GothamBold
+	textLabel.Size = UDim2.new(1, 0, 1, 0)
+	textLabel.Text = deploy.Name
+	textLabel.Parent = billboard
+	
+	billboard.Parent = rootPart
+	
+	table.insert(deployableEspObjects, {
+		deploy = deploy,
+		highlight = highlight,
+		billboard = billboard,
+		label = textLabel,
+		rootPart = rootPart
+	})
 end
 -- =========================================================================================
 
@@ -634,14 +699,25 @@ local function updateESP()
 			end
 		end
 	end
+	
+	-- NEW: Deployables ESP distance update (works for everything inside each deployable)
+	for _, esp in ipairs(deployableEspObjects) do
+		if esp.deploy and esp.deploy.Parent and esp.rootPart and esp.rootPart.Parent then
+			local myChar = LocalPlayer.Character
+			if myChar and myChar:FindFirstChild("HumanoidRootPart") then
+				local dist = (myChar.HumanoidRootPart.Position - esp.rootPart.Position).Magnitude
+				esp.label.Text = esp.deploy.Name .. "\n[" .. math.floor(dist) .. " studs]"
+			end
+		end
+	end
 end
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-	Name = "Vantavade v1.6 [BETA]",
-	LoadingTitle = "Vantavade v1.6",
-	LoadingSubtitle = "Nextbot Avoid + Scary Spawns + ESP + Downed TP",
+	Name = "Vantavade v1.7 [BETA]",
+	LoadingTitle = "Vantavade v1.7",
+	LoadingSubtitle = "Nextbot Avoid + Scary Spawns + ESP + Downed TP + Deployables + Auto Collect",
 	ConfigurationSaving = {
 		Enabled = false,
 	},
@@ -672,7 +748,7 @@ MainTab:CreateToggle({
 			end
 			espObjects = {}
 			
-			if not DownedESPEnabled and not RegularESPEnabled and updateConnection then
+			if not DownedESPEnabled and not RegularESPEnabled and not DeployablesESPEnabled and updateConnection then
 				updateConnection:Disconnect()
 				updateConnection = nil
 			end
@@ -704,7 +780,7 @@ MainTab:CreateToggle({
 			end
 			regularEspMap = {}
 			
-			if not ESPEnabled and not DownedESPEnabled and updateConnection then
+			if not ESPEnabled and not DownedESPEnabled and not DeployablesESPEnabled and updateConnection then
 				updateConnection:Disconnect()
 				updateConnection = nil
 			end
@@ -736,7 +812,41 @@ MainTab:CreateToggle({
 			end
 			downedEspMap = {}
 			
-			if not ESPEnabled and not RegularESPEnabled and updateConnection then
+			if not ESPEnabled and not RegularESPEnabled and not DeployablesESPEnabled and updateConnection then
+				updateConnection:Disconnect()
+				updateConnection = nil
+			end
+		end
+	end,
+})
+
+-- ==================== NEW DEPLOYABLES ESP TOGGLE ====================
+MainTab:CreateToggle({
+	Name = "Deployables ESP (Placed Down)",
+	CurrentValue = false,
+	Flag = "DeployablesESP",
+	Callback = function(Value)
+		DeployablesESPEnabled = Value
+		
+		if Value then
+			-- Initial ESP for already-placed deployables
+			for _, child in ipairs(deployablesFolder:GetChildren()) do
+				createDeployableESP(child)
+			end
+			
+			if not updateConnection then
+				updateConnection = RunService.RenderStepped:Connect(updateESP)
+			end
+		else
+			-- Clean up all deployable ESPs
+			for i = #deployableEspObjects, 1, -1 do
+				local esp = table.remove(deployableEspObjects, i)
+				if esp.highlight then esp.highlight:Destroy() end
+				if esp.billboard then esp.billboard:Destroy() end
+			end
+			deployableEspObjects = {}
+			
+			if not ESPEnabled and not RegularESPEnabled and not DownedESPEnabled and updateConnection then
 				updateConnection:Disconnect()
 				updateConnection = nil
 			end
@@ -833,6 +943,41 @@ MainTab:CreateToggle({
 	end,
 })
 
+-- ==================== NEW v1.7: AUTO COLLECT COLLECTABLES ====================
+MainTab:CreateToggle({
+	Name = "Auto Collect Collectables",
+	CurrentValue = false,
+	Flag = "AutoCollectCollectables",
+	Callback = function(Value)
+		AutoCollectEnabled = Value
+		
+		if Value then
+			task.spawn(function()
+				while AutoCollectEnabled do
+					task.wait(0.1)
+					
+					local char = LocalPlayer.Character
+					if not char or not char:FindFirstChild("HumanoidRootPart") then continue end
+					
+					local playerPos = char.HumanoidRootPart.Position
+					
+					-- Teleport EVERY collectable (Models + BaseParts) directly to the player
+					-- This grabs everything inside each *collectable* model via PivotTo (no bugs)
+					for _, collectable in ipairs(collectablesFolder:GetChildren()) do
+						if collectable:IsA("Model") then
+							-- PivotTo moves the ENTIRE model + all inner parts/children instantly
+							collectable:PivotTo(CFrame.new(playerPos + Vector3.new(math.random(-2, 2), 3, math.random(-2, 2))))
+						elseif collectable:IsA("BasePart") then
+							-- Loose parts (rare but covered)
+							collectable.CFrame = CFrame.new(playerPos + Vector3.new(math.random(-2, 2), 3, math.random(-2, 2)))
+						end
+					end
+				end
+			end)
+		end
+	end,
+})
+
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	if gameProcessed then return end
 	if input.KeyCode == Enum.KeyCode.Q and DownedTPEnabled then
@@ -852,7 +997,7 @@ refreshSafePositions()
 refreshSpawnPositions()      -- v1.6
 refreshItemSpawnPositions()  -- v1.6
 
--- FULLY DYNAMIC ChildAdded
+-- FULLY DYNAMIC ChildAdded for nextbots + players
 nextbotFolder.ChildAdded:Connect(function(child)
 	task.wait(0.35)
 	
@@ -915,6 +1060,25 @@ nextbotFolder.ChildRemoved:Connect(function(child)
 		if esp.highlight then esp.highlight:Destroy() end
 		if esp.billboard then esp.billboard:Destroy() end
 		downedEspMap[child] = nil
+	end
+end)
+
+-- NEW: Dynamic Deployables ESP (handles newly placed deployables instantly)
+deployablesFolder.ChildAdded:Connect(function(child)
+	task.wait(0.35)
+	if DeployablesESPEnabled then
+		createDeployableESP(child)
+	end
+end)
+
+deployablesFolder.ChildRemoved:Connect(function(child)
+	for i = #deployableEspObjects, 1, -1 do
+		if deployableEspObjects[i].deploy == child then
+			local esp = table.remove(deployableEspObjects, i)
+			if esp.highlight then esp.highlight:Destroy() end
+			if esp.billboard then esp.billboard:Destroy() end
+			break
+		end
 	end
 end)
 
